@@ -742,8 +742,26 @@ function mergeRoom(remote, mine){
 }
 
 function hashRoomId(){
-  var m = /[#&]r=([A-Za-z0-9]+)/.exec(location.hash || "");
+  var m = /[#&]r=([A-Za-z0-9-]+)/.exec(location.hash || "");
   return m ? m[1] : null;
+}
+
+/* memorable room ids: three short words, e.g. plum-otter-moon */
+var ROOM_WORDS = ("red blue green gold plum mint jade rose teal coral amber ivory olive peach berry lemon mango melon grape apple pear fig kiwi guava corn rice bean tofu bao soup stew curry mochi taro yam congee lychee sesame ginger garlic chive basil thyme sage cumin chili wasabi miso nori panda tiger crane koi robin wren owl fox deer otter whale dove swan goose duck hen cat dog pup cub colt moon sun star sky cloud rain mist dew frost snow wind breeze storm wave tide river brook creek pond lake sea bay cove reef dune mesa hill ridge peak stone rock sand clay moss fern ivy reed bamboo willow cedar pine oak elm birch maple aspen lotus peony orchid tulip daisy poppy aster iris lily table chair lamp quilt pillow candle teapot kettle ladle spoon fork bowl plate cup mug jar vase apron scarf button thread needle ribbon paper ink brush chalk crayon pencil book page story poem song tune drum flute bell chime harp cello viola piano comet nova orbit ember spark flame lark finch heron plume acorn clover shell kelp perch trout bass carp squid crab prawn snail spice honey sugar salt bread toast crepe scone bagel torta arepa laksa pho udon soba ramen pita naan roti dosa idli poha kheer halva torte tart flan cake pie nougat fudge candy jelly jam curd whey silk wool linen denim satin lace felt cord rope knot sail mast helm anchor oar canoe kayak raft ferry pier dock wharf beach shore coast glade grove copse heath moor vale glen fjord atoll islet oasis dunes butte tor crag scree talus knoll swale marsh bog fen swamp bayou delta").split(" ");
+function genRoomId(){
+  var picked = [];
+  while(picked.length < 3){
+    var w = ROOM_WORDS[Math.floor(Math.random() * ROOM_WORDS.length)];
+    if(picked.indexOf(w) < 0) picked.push(w);
+  }
+  return picked.join("-");
+}
+function freshRoomId(tries){
+  var id = genRoomId();
+  return apiLoad(id).then(function(existing){
+    if(existing && tries > 0) return freshRoomId(tries - 1);
+    return id;
+  }, function(){ return id; });
 }
 function inviteLink(){ return location.origin + location.pathname + "#r=" + roomId; }
 function roomsMap(){ try{ return JSON.parse(localStorage.getItem("dajiatalks.rooms") || "{}"); }catch(_e){ return {}; } }
@@ -1671,15 +1689,16 @@ document.addEventListener("click", function(ev){
     var room = {v:2, setup:true, familyName:famName2, tz:tzVal, revealHour:18,
       createdAt: famParts(tzVal).dateKey, members:[creator], days:{}};
     el.disabled = true; el.textContent = "Setting the table…";
-    var newId = uid() + uid();
-    apiSave(newId, room).then(function(){
-      state = room; roomId = newId; roomError = null; roomLoading = false;
-      rememberRoom(newId, creator.id, famName2);
-      location.hash = "r=" + newId;
-      view = "family"; /* land on the invite link so they can share it right away */
-      render(); startSync();
-      toast("Room created — share the invite link");
-    }, function(){
+    freshRoomId(3).then(function(newId){
+      return apiSave(newId, room).then(function(){
+        state = room; roomId = newId; roomError = null; roomLoading = false;
+        rememberRoom(newId, creator.id, famName2);
+        location.hash = "r=" + newId;
+        view = "family"; /* land on the invite link so they can share it right away */
+        render(); startSync();
+        toast("Room created — share the invite link");
+      });
+    }).catch(function(){
       el.disabled = false; el.textContent = "Create the room";
       toast("Couldn't create the room — check your connection");
     });
