@@ -1,0 +1,922 @@
+<meta charset="utf-8">
+<title>Same Table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Karla:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F3F1E9;
+    --surface:#FBFAF4;
+    --surface-2:#EFECE1;
+    --ink:#242B25;
+    --ink-soft:#5F6A62;
+    --ink-faint:#8B958C;
+    --accent:#38684C;
+    --accent-ink:#FBFAF4;
+    --accent-soft:#DCE7DE;
+    --warm:#B97A1E;
+    --warm-soft:#F2E4CB;
+    --line:#DBD6C6;
+    --line-soft:#E7E3D6;
+    --danger:#9C3D2E;
+    --shadow:0 1px 2px rgba(36,43,37,.06), 0 6px 24px rgba(36,43,37,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#151B17;
+      --surface:#1E2620;
+      --surface-2:#242D26;
+      --ink:#E9E7DB;
+      --ink-soft:#9AA69C;
+      --ink-faint:#6E7A70;
+      --accent:#8CBD9C;
+      --accent-ink:#13291B;
+      --accent-soft:#2A3B30;
+      --warm:#E3AA5C;
+      --warm-soft:#3A3220;
+      --line:#333D35;
+      --line-soft:#2A332C;
+      --danger:#E08D7C;
+      --shadow:0 1px 2px rgba(0,0,0,.25), 0 6px 24px rgba(0,0,0,.2);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#151B17;
+    --surface:#1E2620;
+    --surface-2:#242D26;
+    --ink:#E9E7DB;
+    --ink-soft:#9AA69C;
+    --ink-faint:#6E7A70;
+    --accent:#8CBD9C;
+    --accent-ink:#13291B;
+    --accent-soft:#2A3B30;
+    --warm:#E3AA5C;
+    --warm-soft:#3A3220;
+    --line:#333D35;
+    --line-soft:#2A332C;
+    --danger:#E08D7C;
+    --shadow:0 1px 2px rgba(0,0,0,.25), 0 6px 24px rgba(0,0,0,.2);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:'Karla',system-ui,-apple-system,sans-serif;
+    font-size:16px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'Spline Sans Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .wrap{max-width:660px;margin:0 auto;padding:20px 20px 96px}
+  a{color:var(--accent)}
+  button{font:inherit;color:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important}
+  }
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+  .wordmark{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;letter-spacing:.01em}
+  .wordmark .dot{color:var(--warm)}
+  .famname{font-size:13px;color:var(--ink-soft);text-align:right}
+  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:10px 0 0}
+  nav.tabs button{
+    background:none;border:none;padding:8px 12px 10px;font-size:14px;font-weight:600;
+    color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  nav.tabs button.on{color:var(--ink);border-bottom-color:var(--warm)}
+  .clockline{font-size:12px;color:var(--ink-faint);margin:14px 2px 0;letter-spacing:.02em}
+
+  /* ---------- question hero ---------- */
+  .eyebrow{
+    display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;
+    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    margin:34px 0 14px;
+  }
+  .eyebrow .tag{color:var(--warm);font-weight:500}
+  .eyebrow .sep{color:var(--line)}
+  h1.q{
+    font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:500;
+    font-size:clamp(28px,5.6vw,40px);line-height:1.18;text-align:center;
+    margin:0 auto 8px;max-width:560px;text-wrap:balance;letter-spacing:-.005em;
+  }
+  .qsub{text-align:center;color:var(--ink-soft);font-size:14px;margin:0 0 28px}
+
+  /* ---------- cards & composer ---------- */
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+  .card + .card{margin-top:14px}
+  .stack > * + *{margin-top:14px}
+  .composer textarea{
+    width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:10px;
+    background:var(--ground);color:var(--ink);padding:12px 14px;font:inherit;line-height:1.5;
+  }
+  .composer textarea::placeholder{color:var(--ink-faint)}
+  .polloptions{display:flex;flex-direction:column;gap:10px}
+  .polloptions button.opt{
+    text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);
+    padding:13px 16px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;
+    transition:border-color .12s, background .12s;
+  }
+  .polloptions button.opt:hover{border-color:var(--accent)}
+  .polloptions button.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+  .polloptions .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-faint);flex:none}
+  .polloptions .sel .radio{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--surface)}
+  .btnrow{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .btn{
+    border:none;border-radius:999px;padding:10px 20px;font-weight:700;font-size:15px;
+    background:var(--accent);color:var(--accent-ink);
+  }
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink);font-weight:600}
+  .btn.small{padding:6px 14px;font-size:13px}
+  .linkbtn{background:none;border:none;padding:0;color:var(--accent);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+  .hint{font-size:13px;color:var(--ink-soft)}
+
+  /* ---------- presence ---------- */
+  .presence h3, .sectionhead{
+    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    font-weight:600;margin:0 0 10px;
+  }
+  .grouprow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line-soft)}
+  .grouprow:first-of-type{border-top:none}
+  .gname{font-weight:700;font-size:14px;min-width:110px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+    border-radius:999px;padding:3px 11px;border:1px solid var(--line);color:var(--ink-soft);
+  }
+  .chip.done{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+  .chip.done::before{content:"✓";color:var(--accent);font-weight:700}
+  .chip.me{box-shadow:0 0 0 1.5px var(--warm)}
+
+  /* ---------- lock / countdown ---------- */
+  .lock{text-align:center;padding:26px 20px;margin-top:14px}
+  .lock .big{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:500;margin:6px 0 4px}
+  .lock .count{color:var(--warm);font-weight:500}
+
+  /* ---------- reveal: poll ---------- */
+  .pollrow{padding:12px 0;border-top:1px solid var(--line-soft)}
+  .pollrow:first-child{border-top:none}
+  .pollhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .pollhead .lbl{font-weight:700;font-size:15px}
+  .pollhead .num{font-size:13px;color:var(--ink-soft)}
+  .lead{font-size:10.5px;letter-spacing:.1em;color:var(--warm);font-weight:500;margin-left:8px}
+  .bartrack{height:12px;border-radius:0 6px 6px 0;background:var(--surface-2);margin:7px 0 6px;overflow:hidden}
+  .barfill{height:100%;background:var(--accent);border-radius:0 6px 6px 0;min-width:2px}
+  .voters{font-size:13px;color:var(--ink-soft)}
+
+  /* ---------- reveal: letters ---------- */
+  .lettergroup{margin-top:18px}
+  .letter{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .letter + .letter{margin-top:10px}
+  .letter .from{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+  .letter .who{font-weight:700;font-size:14px}
+  .letter .when{font-size:11.5px;color:var(--ink-faint)}
+  .letter .txt{font-size:15.5px;line-height:1.6;white-space:pre-wrap}
+  .reacts{display:flex;gap:6px;margin-top:10px}
+  .reacts button{
+    border:1px solid var(--line);background:none;border-radius:999px;padding:2px 10px;
+    font-size:13px;color:var(--ink-soft);
+  }
+  .reacts button.mine{background:var(--warm-soft);border-color:transparent;color:var(--ink)}
+
+  /* ---------- trends ---------- */
+  .trends{background:var(--warm-soft);border-radius:14px;padding:18px 20px;margin-top:14px}
+  .trends h3{margin:0 0 8px;font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:17px}
+  .trends ul{margin:0;padding-left:18px}
+  .trends li{margin:4px 0;font-size:14.5px}
+  .trends .w{font-weight:700}
+  .trends .foot{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+
+  /* ---------- archive ---------- */
+  .dayrow{
+    display:flex;gap:14px;align-items:baseline;width:100%;text-align:left;
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;
+    padding:14px 16px;box-shadow:var(--shadow);
+  }
+  .dayrow + .dayrow{margin-top:10px}
+  .dayrow .d{font-size:12px;color:var(--ink-soft);min-width:86px}
+  .dayrow .qq{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:500;flex:1}
+  .dayrow .n{font-size:12px;color:var(--ink-faint);white-space:nowrap}
+  .backrow{margin:18px 0 6px}
+
+  /* ---------- forms / setup ---------- */
+  .field{margin-top:14px}
+  .field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+  .field input[type=text], .field select, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;background:var(--ground);
+    color:var(--ink);padding:10px 12px;font:inherit;
+  }
+  .field textarea{min-height:74px;resize:vertical}
+  .setuphero{text-align:center;margin:44px 0 30px}
+  .setuphero h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:34px;margin:0 0 10px;line-height:1.15;text-wrap:balance}
+  .setuphero p{color:var(--ink-soft);max-width:46ch;margin:0 auto;font-size:15.5px}
+  .groupbuilder{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;margin-top:12px}
+  .groupbuilder .rm{float:right}
+
+  /* ---------- identity ---------- */
+  .whoami{margin-top:30px}
+  .whoami .grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .whoami .grid button{
+    border:1.5px solid var(--line);background:var(--surface);border-radius:999px;
+    padding:8px 16px;font-weight:600;font-size:15px;
+  }
+  .whoami .grid button:hover{border-color:var(--accent)}
+
+  /* ---------- misc ---------- */
+  .banner{
+    border-radius:10px;padding:10px 14px;font-size:13.5px;margin:14px 0 0;
+    background:var(--warm-soft);color:var(--ink);
+  }
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+    background:var(--ink);color:var(--ground);padding:10px 18px;border-radius:999px;
+    font-size:14px;font-weight:600;box-shadow:var(--shadow);z-index:50;
+  }
+  .yourline{border-left:3px solid var(--warm);padding:2px 0 2px 14px;margin-top:8px}
+  .yourline .txt{font-size:15px;white-space:pre-wrap}
+  .footer{margin-top:44px;text-align:center;font-size:12px;color:var(--ink-faint)}
+</style>
+
+<div class="wrap" id="app" aria-live="polite"></div>
+
+<script type="application/json" id="state">{"v":1,"setup":false,"familyName":"","tz":null,"revealHour":18,"createdAt":null,"groups":[],"days":{}}</script>
+
+<script>
+(function(){
+"use strict";
+var TEMPLATE = "<!doctype html>\n" + document.documentElement.outerHTML;
+
+var state = JSON.parse(document.getElementById("state").textContent);
+var REAL_STATE_JSON = JSON.stringify(state);
+
+/* ---------------- question bank ---------------- */
+var QBANK = [
+  {t:"poll", tag:"Food fight", q:"Rice or noodles — if you had to pick one forever?", o:["Rice","Noodles"]},
+  {t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to childhood?"},
+  {t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"]},
+  {t:"free", tag:"Story time", q:"Describe a meal you'll never forget — where, who, what."},
+  {t:"poll", tag:"This or that", q:"Morning person or night owl?", o:["Up with the sun","Alive after midnight","Depends on the day"]},
+  {t:"free", tag:"Family lore", q:"What's the best piece of advice a family member ever gave you?"},
+  {t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"]},
+  {t:"free", tag:"Small joys", q:"What made you laugh this week?"},
+  {t:"poll", tag:"Would you rather", q:"Would you rather always be 10 minutes late or always 30 minutes early?", o:["10 minutes late","30 minutes early"]},
+  {t:"free", tag:"Memory lane", q:"Share a fond memory of a grandparent."},
+  {t:"poll", tag:"Food fight", q:"Cilantro:", o:["Delicious","Tastes like soap","What's cilantro?"]},
+  {t:"free", tag:"Family lore", q:"If our family had a motto, what should it be — and why?"},
+  {t:"poll", tag:"This or that", q:"Beach or mountains?", o:["Beach","Mountains"]},
+  {t:"free", tag:"Small joys", q:"What's one small thing you're grateful for today?"},
+  {t:"poll", tag:"Food fight", q:"Pineapple on pizza?", o:["Yes","No","Only when no one's watching"]},
+  {t:"free", tag:"Story time", q:"What's a story about you that the family always retells?"},
+  {t:"poll", tag:"Would you rather", q:"Would you rather cook for the whole family forever, or do the dishes forever?", o:["Cook forever","Dishes forever"]},
+  {t:"free", tag:"Memory lane", q:"What was your favorite hiding spot as a kid?"},
+  {t:"poll", tag:"This or that", q:"When you can't decide what to watch:", o:["Rewatch an old favorite","Something brand new"]},
+  {t:"free", tag:"Big & little", q:"What did you want to be when you were eight years old?"},
+  {t:"poll", tag:"Food fight", q:"Sweet or savory breakfast?", o:["Sweet","Savory","Both, it's called brunch"]},
+  {t:"free", tag:"Family lore", q:"What's a family tradition you hope never dies?"},
+  {t:"poll", tag:"This or that", q:"Karaoke night. You are:", o:["First to grab the mic","Dragged up eventually","Filming from the table"]},
+  {t:"free", tag:"Small joys", q:"A song that reminds you of home — what is it, and why?"},
+  {t:"poll", tag:"Food fight", q:"Leftover pizza:", o:["Cold, straight from the fridge","Reheated properly","Leftover pizza doesn't survive the night"]},
+  {t:"free", tag:"Big & little", q:"What's the bravest thing you've ever done?"},
+  {t:"poll", tag:"Would you rather", q:"Would you rather spend one week in the past or one week in the future?", o:["The past","The future"]},
+  {t:"free", tag:"Story time", q:"First thing you'd cook for everyone if we were all in one kitchen tomorrow?"},
+  {t:"poll", tag:"This or that", q:"Window or aisle?", o:["Window","Aisle","I sleep before takeoff, doesn't matter"]},
+  {t:"free", tag:"Memory lane", q:"What's a habit you picked up from a parent — for better or worse?"},
+  {t:"poll", tag:"Food fight", q:"Spice tolerance check:", o:["Mild, please","Medium","Bring the fire","Why is this water spicy"]},
+  {t:"free", tag:"Small joys", q:"Describe your perfect Sunday, hour by hour or roughly."},
+  {t:"poll", tag:"Would you rather", q:"Would you rather speak every language or play every instrument?", o:["Every language","Every instrument"]},
+  {t:"free", tag:"Big & little", q:"What would you tell your 15-year-old self?"},
+  {t:"poll", tag:"This or that", q:"Calling or texting?", o:["Call me","Text me","Voice notes, obviously"]},
+  {t:"free", tag:"Family lore", q:"What's the funniest family mishap you remember?"},
+  {t:"poll", tag:"Food fight", q:"The best part of a big family meal:", o:["The appetizers","The main event","Dessert","The leftovers tomorrow"]},
+  {t:"free", tag:"Memory lane", q:"Describe a photo you wish existed."},
+  {t:"poll", tag:"This or that", q:"Board games or card games?", o:["Board games","Card games","Whatever ends in an argument"]},
+  {t:"free", tag:"Small joys", q:"What's something small that made today better?"},
+  {t:"poll", tag:"Food fight", q:"Which condiment could you not live without?", o:["Soy sauce","Hot sauce","Ketchup","Mayo"]},
+  {t:"free", tag:"Big & little", q:"What's something you're proud of from this year?"},
+  {t:"poll", tag:"Would you rather", q:"Would you rather teleport anywhere once a year, or have free flights forever (with layovers)?", o:["One teleport a year","Free flights forever"]},
+  {t:"free", tag:"Story time", q:"What's your comfort food, and who introduced you to it?"},
+  {t:"poll", tag:"This or that", q:"Rain all day. That's:", o:["Cozy","Gloomy","An excuse to nap"]},
+  {t:"free", tag:"Memory lane", q:"What do you miss most about all being in one place?"},
+  {t:"poll", tag:"Food fight", q:"Cake or pie?", o:["Cake","Pie","Ice cream was the answer all along"]},
+  {t:"free", tag:"Big & little", q:"What's a talent you wish you had?"},
+  {t:"poll", tag:"This or that", q:"Ideal family reunion:", o:["Beach house","Big city trip","Someone's living room","Chaotic road trip"]},
+  {t:"free", tag:"Small joys", q:"What are you most looking forward to this month?"},
+  {t:"poll", tag:"Food fight", q:"Soup is:", o:["For any weather","Strictly cold-weather food","A drink"]},
+  {t:"free", tag:"Story time", q:"Tell us about the best gift you've ever received."},
+  {t:"poll", tag:"Would you rather", q:"Would you rather know every family recipe by heart, or every family story by heart?", o:["The recipes","The stories"]},
+  {t:"free", tag:"Big & little", q:"Describe 'home' in three sentences."},
+  {t:"poll", tag:"This or that", q:"Breakfast for dinner:", o:["Always yes","Breakfast has a time and a place"]},
+  {t:"free", tag:"Family lore", q:"What's something you learned recently that surprised you?"},
+  {t:"poll", tag:"Food fight", q:"The last bite of a shared dish belongs to:", o:["Whoever's fastest","The youngest","The eldest","Split it into tiny pieces"]},
+  {t:"free", tag:"Memory lane", q:"What place would you take us all to, if money were no object?"},
+  {t:"poll", tag:"This or that", q:"Best decade of music:", o:["70s–80s","90s","2000s","Right now"]},
+  {t:"free", tag:"Big & little", q:"What's a question you wish someone would ask you? (Answer it too, if you like.)"}
+];
+
+/* deterministic pick: same question for everyone on a given family-date */
+function questionForDate(dateKey){
+  var d = state.days[dateKey];
+  if(d && d.q) return d.q; /* snapshotted on first answer, stable forever */
+  var parts = dateKey.split("-");
+  var ord = Math.round(Date.UTC(+parts[0], +parts[1]-1, +parts[2]) / 86400000);
+  return QBANK[((ord*37) % QBANK.length + QBANK.length) % QBANK.length];
+}
+
+/* ---------------- family clock ---------------- */
+function famParts(){
+  var tz = state.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var f = new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+  var p = {};
+  f.formatToParts(new Date()).forEach(function(x){ p[x.type]=x.value; });
+  var hour = +p.hour; if(hour===24) hour=0;
+  return {dateKey:p.year+"-"+p.month+"-"+p.day, hour:hour, minute:+p.minute, tz:tz};
+}
+function prettyDate(dateKey, opts){
+  var parts = dateKey.split("-");
+  var d = new Date(Date.UTC(+parts[0], +parts[1]-1, +parts[2], 12));
+  return d.toLocaleDateString(undefined, opts || {weekday:"long", month:"long", day:"numeric"});
+}
+function dayNumber(dateKey){
+  if(!state.createdAt) return 1;
+  function ord(k){ var p=k.split("-"); return Math.round(Date.UTC(+p[0],+p[1]-1,+p[2])/86400000); }
+  return Math.max(1, ord(dateKey) - ord(state.createdAt) + 1);
+}
+
+/* ---------------- state helpers ---------------- */
+function allMembers(){
+  var out=[]; state.groups.forEach(function(g){ g.members.forEach(function(m){ out.push({id:m.id,name:m.name,group:g}); }); });
+  return out;
+}
+function memberById(id){ return allMembers().find(function(m){return m.id===id;}) || null; }
+function day(dateKey){ return state.days[dateKey] || {answers:{}, reactions:{}}; }
+function ensureDay(dateKey){
+  if(!state.days[dateKey]) state.days[dateKey] = {q:questionForDate(dateKey), answers:{}, reactions:{}};
+  if(!state.days[dateKey].q) state.days[dateKey].q = questionForDate(dateKey);
+  if(!state.days[dateKey].reactions) state.days[dateKey].reactions = {};
+  return state.days[dateKey];
+}
+function groupAnswered(g, dateKey){
+  var d = day(dateKey);
+  return g.members.length>0 && g.members.every(function(m){ return !!d.answers[m.id]; });
+}
+function isUnlocked(dateKey, viewerGroup){
+  var now = famParts();
+  if(dateKey < now.dateKey) return true;                 /* past days are always open */
+  if(now.hour >= (state.revealHour||18)) return true;    /* 6:00 PM at the family table */
+  if(viewerGroup && groupAnswered(viewerGroup, dateKey)) return true;
+  if(!viewerGroup && state.groups.length && state.groups.every(function(g){return groupAnswered(g,dateKey);})) return true;
+  return false;
+}
+function minutesToReveal(){
+  var now = famParts();
+  return Math.max(0, (state.revealHour||18)*60 - (now.hour*60+now.minute));
+}
+
+/* ---------------- persistence ---------------- */
+var artifactNS = null, nsResolved = false, sampleMode = false, readOnly = false;
+var usePromise = (window.claude && window.claude.use) ? window.claude.use("artifact") : Promise.resolve(null);
+usePromise.then(function(ns){ artifactNS = ns; nsResolved = true; render(); },
+                function(){ nsResolved = true; render(); });
+
+function withState(st){
+  var json = JSON.stringify(st).replace(/</g, "\\u003c");
+  return TEMPLATE.replace(/(<script type="application\/json" id="state">)[\s\S]*?(<\/script>)/,
+    function(_, a, b){ return a + json + b; });
+}
+function save(){
+  render(); /* optimistic */
+  if(sampleMode) return;
+  if(!artifactNS){ toast("Preview mode — changes stay on this device"); return; }
+  artifactNS.publish(withState(state)).then(function(){},
+    function(e){
+      var code = e && e.code;
+      if(code === "conflict"){ /* someone else saved first; the page reloads to their version */ return; }
+      if(code === "not_granted" || code === "not_writer"){ readOnly = true; toast("View-only access — ask the family to share edit access"); render(); return; }
+      toast("Couldn't save — check your connection and try again");
+      render();
+    });
+}
+
+/* ---------------- identity (per device) ---------------- */
+var LS_ME = "sametable.me";
+var sampleMe = null;
+function getMe(){
+  var id = null;
+  try{ id = localStorage.getItem(LS_ME); }catch(_e){}
+  if(sampleMode) id = sampleMe;
+  return id ? memberById(id) : null;
+}
+function setMe(id){
+  if(sampleMode){ sampleMe = id; render(); return; }
+  try{ localStorage.setItem(LS_ME, id); }catch(_e){}
+  render();
+}
+
+/* ---------------- trends (free-form reveal) ---------------- */
+var STOP = ("the a an and or but if then than that this those these i you he she it we they them his her my your our their of in on at to for with from by about as is are was were be been being am do does did have has had not no yes so just very really too also there here when what who whom whose which why how all any some one two few more most other own same its im dont didnt cant wont isnt thats youre were theyre will would can could should shall may might must out up down over under again once because while during before after above below off only still ever never always sometimes lot bit thing things stuff way ways got get gets getting go goes going went come came like even much many back now new old good great little every each").split(" ");
+function computeTrends(entries){
+  /* entries: [{name, text, at}] */
+  var byWord = {}, freq = {};
+  entries.forEach(function(e){
+    var seen = {};
+    var words = (e.text.toLowerCase().match(new RegExp("[a-z\\u00C0-\\u024F\\u0400-\\u04FF'-]{3,}","g")) || []);
+    words.forEach(function(w){
+      w = w.replace(/^['-]+|['-]+$/g,"").replace(/'/g,"");
+      if(w.length<3 || STOP.indexOf(w)>=0) return;
+      freq[w] = (freq[w]||0)+1;
+      if(!seen[w]){ seen[w]=true; (byWord[w]=byWord[w]||[]).push(e.name); }
+    });
+  });
+  var shared = Object.keys(byWord).filter(function(w){ return byWord[w].length>=2; })
+    .sort(function(a,b){ return byWord[b].length-byWord[a].length || freq[b]-freq[a]; }).slice(0,6)
+    .map(function(w){ return {word:w, people:byWord[w]}; });
+  var first = entries.slice().sort(function(a,b){ return (a.at||0)-(b.at||0); })[0];
+  var longest = entries.slice().sort(function(a,b){ return b.text.length-a.text.length; })[0];
+  return {shared:shared, first:first, longest:longest};
+}
+
+/* ---------------- rendering ---------------- */
+var view = "today";      /* today | archive | family | day:YYYY-MM-DD */
+var draftText = "";
+var draftChoice = null;
+var editingAnswer = false;
+var app = document.getElementById("app");
+
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function toast(msg){
+  var t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+function render(){
+  if(!state.setup){ app.innerHTML = renderSetup(); return; }
+  var me = getMe();
+  var html = renderHeader(me);
+  if(!me && view === "today"){
+    html += renderWhoAmI();
+  } else if(view === "today"){
+    html += renderDay(famParts().dateKey, me, true);
+  } else if(view === "archive"){
+    html += renderArchive();
+  } else if(view === "family"){
+    html += renderFamily(me);
+  } else if(view.indexOf("day:")===0){
+    html += '<div class="backrow"><button class="linkbtn" data-act="goto" data-v="archive">← All days</button></div>';
+    html += renderDay(view.slice(4), me, false);
+  }
+  html += '<div class="footer">Same Table · one question a day, answered together</div>';
+  app.innerHTML = html;
+}
+
+function renderHeader(me){
+  var tabs = [["today","Today"],["archive","Past days"],["family","Family"]];
+  var cur = view.indexOf("day:")===0 ? "archive" : view;
+  var h = '<header><div class="wordmark">Same Table<span class="dot">.</span></div>' +
+    '<div class="famname">' + esc(state.familyName) + (me ? '<br><span class="mono" style="font-size:11px">you are ' + esc(me.name) + ' · <button class="linkbtn" style="font-size:11px" data-act="switchme">switch</button></span>' : "") + '</div></header>';
+  h += '<nav class="tabs">' + tabs.map(function(t){
+    return '<button data-act="goto" data-v="' + t[0] + '" class="' + (cur===t[0]?"on":"") + '">' + t[1] + '</button>';
+  }).join("") + '</nav>';
+  if(sampleMode) h += '<div class="banner">You’re exploring a <b>sample family</b> — nothing is saved. <button class="linkbtn" data-act="exitsample">Exit sample</button></div>';
+  else if(nsResolved && !artifactNS) h += '<div class="banner">Preview mode: this device only. Open the published page on claude.ai so answers save for everyone.</div>';
+  else if(readOnly) h += '<div class="banner">You have view-only access. Ask the family to share this page with edit access so you can answer.</div>';
+  return h;
+}
+
+function renderWhoAmI(){
+  var h = '<div class="whoami"><div class="sectionhead">Who are you?</div>' +
+    '<p class="hint">Pick yourself once on this device — your answers will be signed with this name.</p>';
+  state.groups.forEach(function(g){
+    h += '<div style="margin-top:14px"><div class="gname">' + esc(g.name) + '</div><div class="grid">' +
+      g.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") + '</div></div>';
+  });
+  h += '<div style="margin-top:22px" class="hint">Not listed? ' +
+    '<button class="linkbtn" data-act="gotofamily">Add yourself in Family</button></div></div>';
+  return h;
+}
+
+function renderDay(dateKey, me, isToday){
+  var q = questionForDate(dateKey);
+  var d = day(dateKey);
+  var myAns = me ? d.answers[me.id] : null;
+  var unlocked = isUnlocked(dateKey, me && me.group);
+  var clock = famParts();
+  var h = "";
+
+  if(isToday){
+    h += '<div class="clockline mono">' + prettyDate(dateKey) + " · " +
+      String(clock.hour).padStart(2,"0") + ":" + String(clock.minute).padStart(2,"0") +
+      " at the family table (" + esc((state.tz||clock.tz).split("/").pop().replace(/_/g," ")) + ")</div>";
+  }
+
+  h += '<div class="eyebrow"><span class="mono">Day ' + dayNumber(dateKey) + '</span><span class="sep">·</span>' +
+       '<span class="tag">' + esc(q.tag) + '</span><span class="sep">·</span>' +
+       '<span>' + (q.t==="poll" ? "Poll" : "Open answer") + '</span></div>';
+  h += '<h1 class="q">' + esc(q.q) + '</h1>';
+  if(!isToday) h += '<p class="qsub">' + prettyDate(dateKey, {weekday:"long", year:"numeric", month:"long", day:"numeric"}) + '</p>';
+  else h += '<p class="qsub">Everyone gets this question today. Answers open when your whole group is in — or at ' + revealLabel() + '.</p>';
+
+  /* composer / my answer */
+  if(isToday && !readOnly){
+    if(!myAns || editingAnswer){
+      h += renderComposer(q, myAns);
+    } else {
+      h += '<div class="card"><div class="sectionhead">Your answer</div><div class="yourline">' +
+        (q.t==="poll" ? '<div class="txt"><b>' + esc(q.o[myAns.choice]) + '</b></div>'
+                      : '<div class="txt">' + esc(myAns.text) + '</div>') +
+        '</div>' +
+        (!unlocked ? '<div class="btnrow"><button class="btn ghost small" data-act="editans">Change answer</button></div>' : "") +
+        '</div>';
+    }
+  }
+
+  /* presence */
+  h += '<div class="card presence" style="margin-top:14px"><h3>Around the table</h3>' + renderPresence(dateKey, me) + '</div>';
+
+  /* reveal or lock */
+  if(unlocked){
+    h += renderReveal(dateKey, q, me, isToday);
+  } else {
+    var mins = minutesToReveal();
+    var cd = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
+    h += '<div class="card lock"><div class="sectionhead">Answers are sealed</div>' +
+      '<div class="big">The table opens when everyone in ' + esc(me.group.name) + ' has answered</div>' +
+      '<div class="hint">or at ' + revealLabel() + ' — <span class="count mono" data-countdown>' + cd + '</span> from now, whichever comes first.</div></div>';
+  }
+  return h;
+}
+
+function revealLabel(){
+  var hr = state.revealHour||18;
+  return (hr>12? hr-12 : hr) + ":00 " + (hr>=12?"PM":"AM");
+}
+
+function renderComposer(q, myAns){
+  var h = '<div class="card composer"><div class="sectionhead">' + (myAns ? "Change your answer" : "Your answer") + '</div>';
+  if(q.t==="poll"){
+    var sel = draftChoice!=null ? draftChoice : (myAns ? myAns.choice : null);
+    h += '<div class="polloptions">' + q.o.map(function(o,i){
+      return '<button class="opt' + (sel===i?" sel":"") + '" data-act="pickopt" data-i="' + i + '"><span class="radio"></span>' + esc(o) + '</button>';
+    }).join("") + '</div>';
+    h += '<div class="btnrow"><button class="btn" data-act="submit" ' + (sel==null?"disabled":"") + '>Lock it in</button>';
+  } else {
+    var val = draftText || (myAns ? myAns.text : "");
+    h += '<textarea id="freetext" placeholder="Take your time — a few sentences is perfect.">' + esc(val) + '</textarea>';
+    h += '<div class="btnrow"><button class="btn" data-act="submit">Send to the table</button>';
+  }
+  if(myAns) h += '<button class="btn ghost" data-act="canceledit">Cancel</button>';
+  h += '<span class="hint">Hidden from everyone until the reveal.</span></div></div>';
+  return h;
+}
+
+function renderPresence(dateKey, me){
+  var d = day(dateKey);
+  var myGid = me ? me.group.id : null;
+  var groups = state.groups.slice().sort(function(a,b){ return (a.id===myGid?-1:0)-(b.id===myGid?-1:0); });
+  return groups.map(function(g){
+    return '<div class="grouprow"><span class="gname">' + esc(g.name) + '</span><span class="chips">' +
+      g.members.map(function(m){
+        var done = !!d.answers[m.id];
+        return '<span class="chip' + (done?" done":"") + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>';
+      }).join("") + '</span></div>';
+  }).join("");
+}
+
+function renderReveal(dateKey, q, me, isToday){
+  var d = day(dateKey);
+  var entries = [];
+  state.groups.forEach(function(g){
+    g.members.forEach(function(m){
+      var a = d.answers[m.id];
+      if(a) entries.push({id:m.id, name:m.name, group:g.name, ans:a});
+    });
+  });
+  if(!entries.length){
+    return '<div class="card lock"><div class="big">No answers made it in ' + (isToday?'yet':'this day') + '.</div>' +
+      (isToday ? '<div class="hint">The table is open — add yours above and it appears here.</div>' : '') + '</div>';
+  }
+  var h = '<div style="margin-top:26px"><div class="sectionhead" style="text-align:center">The table is open · ' + entries.length + ' answer' + (entries.length===1?"":"s") + '</div>';
+  if(q.t==="poll") h += renderPollReveal(q, entries);
+  else h += renderLetters(dateKey, q, entries, me);
+  h += '</div>';
+  return h;
+}
+
+function renderPollReveal(q, entries){
+  var counts = q.o.map(function(){ return []; });
+  entries.forEach(function(e){ if(counts[e.ans.choice]) counts[e.ans.choice].push(e.name); });
+  var total = entries.length;
+  var max = Math.max.apply(null, counts.map(function(c){return c.length;}));
+  var h = '<div class="card">';
+  q.o.forEach(function(o,i){
+    var n = counts[i].length, pct = total? Math.round(n/total*100) : 0;
+    h += '<div class="pollrow"><div class="pollhead"><span class="lbl">' + esc(o) +
+      (n===max && n>0 ? '<span class="lead mono">LEADING</span>' : '') + '</span>' +
+      '<span class="num mono">' + n + ' · ' + pct + '%</span></div>' +
+      '<div class="bartrack"><div class="barfill" style="width:' + (total? (n/total*100) : 0) + '%"></div></div>' +
+      '<div class="voters">' + (n ? counts[i].map(esc).join(" · ") : "—") + '</div></div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function renderLetters(dateKey, q, entries, me){
+  var trends = computeTrends(entries.map(function(e){ return {name:e.name, text:e.ans.text||"", at:e.ans.at}; }));
+  var h = "";
+  if(entries.length>=2){
+    h += '<div class="trends"><h3>Common threads</h3>';
+    if(trends.shared.length){
+      h += '<ul>' + trends.shared.map(function(s){
+        return '<li><span class="w">“' + esc(s.word) + '”</span> came up for ' + esc(s.people.join(", ")) + '</li>';
+      }).join("") + '</ul>';
+    } else {
+      h += '<div style="font-size:14.5px">' + entries.length + ' very different answers tonight — no two alike. Worth reading every one.</div>';
+    }
+    var bits = [];
+    if(trends.first && trends.first.at) bits.push("First in: <b>" + esc(trends.first.name) + "</b>");
+    if(trends.longest) bits.push("Longest letter: <b>" + esc(trends.longest.name) + "</b> (" + (trends.longest.text.trim().split(/\s+/).length) + " words)");
+    if(bits.length) h += '<div class="foot">' + bits.join(" · ") + '</div>';
+    h += '</div>';
+  }
+  var byGroup = {};
+  entries.forEach(function(e){ (byGroup[e.group]=byGroup[e.group]||[]).push(e); });
+  Object.keys(byGroup).forEach(function(gname){
+    h += '<div class="lettergroup"><div class="sectionhead">' + esc(gname) + '</div>';
+    byGroup[gname].forEach(function(e){
+      var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
+      h += '<div class="letter"><div class="from"><span class="who">' + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
+        '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
+    });
+    h += '</div>';
+  });
+  return h;
+}
+
+var EMOJI = ["❤️","😂","🥹"];
+function renderReacts(dateKey, targetId, me){
+  var d = day(dateKey);
+  var r = (d.reactions && d.reactions[targetId]) || {};
+  return '<div class="reacts">' + EMOJI.map(function(em){
+    var who = r[em] || [];
+    var mine = !!me && who.indexOf(me.id)>=0;
+    return '<button class="' + (mine?"mine":"") + '" data-act="react" data-day="' + dateKey + '" data-t="' + targetId + '" data-e="' + esc(em) + '" ' +
+      'title="' + esc(who.map(function(id){ var m=memberById(id); return m?m.name:""; }).filter(Boolean).join(", ")) + '">' +
+      em + (who.length? ' <span class="mono">' + who.length + '</span>' : "") + '</button>';
+  }).join("") + '</div>';
+}
+
+function renderArchive(){
+  var today = famParts().dateKey;
+  var keys = Object.keys(state.days).filter(function(k){ return k < today; }).sort().reverse();
+  var h = '<div style="margin-top:26px"><div class="sectionhead">Past days at the table</div>';
+  if(!keys.length) h += '<p class="hint">Nothing here yet — after your first evening together, every day’s question and answers live on here.</p>';
+  keys.forEach(function(k){
+    var q = questionForDate(k);
+    var n = Object.keys(day(k).answers).length;
+    h += '<button class="dayrow" data-act="goto" data-v="day:' + k + '">' +
+      '<span class="d mono">' + prettyDate(k,{month:"short",day:"numeric"}) + '<br>Day ' + dayNumber(k) + '</span>' +
+      '<span class="qq">' + esc(q.q) + '</span>' +
+      '<span class="n mono">' + n + ' ans</span></button>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function renderFamily(me){
+  var h = '<div style="margin-top:26px" class="stack">';
+  h += '<div class="card"><div class="sectionhead">' + esc(state.familyName) + '</div>' +
+    '<p class="hint">One question a day for everyone, revealed together at ' + revealLabel() + ' (' + esc(state.tz||"local time") + ') — or the moment a whole group is in.</p>';
+  if(!readOnly){
+    h += '<div class="field"><label for="famname">Family name</label><input type="text" id="famname" value="' + esc(state.familyName) + '"></div>' +
+      '<div class="field"><label for="famtz">The family clock (timezone for “today” and the ' + revealLabel() + ' reveal)</label>' + tzSelect("famtz", state.tz) + '</div>' +
+      '<div class="btnrow"><button class="btn small" data-act="savefam">Save</button></div>';
+  }
+  h += '</div>';
+
+  state.groups.forEach(function(g){
+    h += '<div class="card"><div class="sectionhead">' + esc(g.name) + ' · ' + g.members.length + '</div><div class="chips" style="margin-bottom:10px">' +
+      g.members.map(function(m){ return '<span class="chip' + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>'; }).join("") + '</div>';
+    if(!readOnly){
+      h += '<div class="btnrow"><input type="text" id="nm-' + g.id + '" placeholder="Add a person" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
+        '<button class="btn ghost small" data-act="addmember" data-g="' + g.id + '">Add</button></div>';
+    }
+    h += '</div>';
+  });
+
+  if(!readOnly){
+    h += '<div class="card"><div class="sectionhead">New group</div>' +
+      '<p class="hint">A group is a household or a branch of the family — the people whose answers unlock together.</p>' +
+      '<div class="btnrow"><input type="text" id="newgroup" placeholder="e.g. The Toronto house" style="flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
+      '<button class="btn ghost small" data-act="addgroup">Create group</button></div></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function tzSelect(id, val){
+  var zones;
+  try{ zones = Intl.supportedValuesOf("timeZone"); }
+  catch(_e){ zones = ["America/Los_Angeles","America/New_York","America/Toronto","Europe/London","Europe/Paris","Asia/Manila","Asia/Shanghai","Asia/Tokyo","Australia/Sydney"]; }
+  var cur = val || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if(zones.indexOf(cur)<0) zones = [cur].concat(zones);
+  return '<select id="' + id + '">' + zones.map(function(z){
+    return '<option value="' + esc(z) + '"' + (z===cur?" selected":"") + '>' + esc(z.replace(/_/g," ")) + '</option>';
+  }).join("") + '</select>';
+}
+
+/* ---------------- setup ---------------- */
+var setupGroups = [{name:"", names:""},{name:"", names:""}];
+function renderSetup(){
+  var h = '<header><div class="wordmark">Same Table<span class="dot">.</span></div></header>';
+  h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
+    '<p>Every day, every group gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until everyone in a group is in, or ' + revealLabel() + ', whichever comes first. Then the whole table opens.</p></div>';
+  h += '<div class="card"><div class="sectionhead">Set the table</div>' +
+    '<div class="field"><label for="su-name">Family name</label><input type="text" id="su-name" placeholder="e.g. The Moreno family" value="' + esc(state.familyName) + '"></div>' +
+    '<div class="field"><label for="su-tz">The family clock</label>' + tzSelect("su-tz", state.tz) +
+    '<div class="hint" style="margin-top:5px">“Today” and the ' + revealLabel() + ' reveal follow this one clock, wherever everyone lives.</div></div>';
+  setupGroups.forEach(function(g,i){
+    h += '<div class="groupbuilder">' + (setupGroups.length>1 ? '<button class="linkbtn rm" data-act="su-rmgroup" data-i="' + i + '">remove</button>' : "") +
+      '<div class="field" style="margin-top:0"><label>Group ' + (i+1) + ' name</label><input type="text" data-su-gname="' + i + '" placeholder="e.g. The Lisbon crew" value="' + esc(g.name) + '"></div>' +
+      '<div class="field"><label>Who’s in it? (one name per line)</label><textarea data-su-gnames="' + i + '" placeholder="Mom&#10;Tomás">' + esc(g.names) + '</textarea></div></div>';
+  });
+  h += '<div class="btnrow"><button class="btn ghost small" data-act="su-addgroup">+ Another group</button></div>';
+  h += '<div class="btnrow" style="margin-top:20px"><button class="btn" data-act="su-start">Set the table</button>' +
+    '<button class="linkbtn" data-act="loadsample">or explore a sample family first</button></div></div>';
+  return h;
+}
+function collectSetup(){
+  setupGroups.forEach(function(g,i){
+    var n = document.querySelector('[data-su-gname="' + i + '"]');
+    var t = document.querySelector('[data-su-gnames="' + i + '"]');
+    if(n) g.name = n.value; if(t) g.names = t.value;
+  });
+  var nameEl = document.getElementById("su-name"), tzEl = document.getElementById("su-tz");
+  return {name: nameEl?nameEl.value.trim():"", tz: tzEl?tzEl.value:null};
+}
+
+/* ---------------- sample family ---------------- */
+function loadSample(){
+  var now = famParts();
+  function shift(days){
+    var p = now.dateKey.split("-");
+    var d = new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); d.setUTCDate(d.getUTCDate()+days);
+    return d.toISOString().slice(0,10);
+  }
+  var g1={id:"g1",name:"The Lisbon crew",members:[{id:"m1",name:"Marisol"},{id:"m2",name:"Tomás"}]};
+  var g2={id:"g2",name:"The Toronto house",members:[{id:"m3",name:"Dani"},{id:"m4",name:"Priya"},{id:"m5",name:"Sam"}]};
+  var g3={id:"g3",name:"Manila",members:[{id:"m6",name:"Lola Carmen"},{id:"m7",name:"Rico"}]};
+  var days = {};
+  days[shift(-2)] = {
+    q:{t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"]},
+    answers:{m1:{choice:1,at:0},m2:{choice:0,at:0},m3:{choice:0,at:0},m4:{choice:1,at:0},m5:{choice:0,at:0},m6:{choice:1,at:0},m7:{choice:0,at:0}},
+    reactions:{}
+  };
+  days[shift(-1)] = {
+    q:{t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to childhood?"},
+    answers:{
+      m1:{text:"Orange peel drying on the radiator. Mamã used to line them up every winter and the whole flat smelled like Christmas for months.",at:1},
+      m2:{text:"Petrol at the ferry dock, honestly. It means summer is starting and we're going to the island.",at:2},
+      m3:{text:"Rice cooking. Specifically the moment you open the lid too early and get told off for it.",at:3},
+      m4:{text:"Chalk dust and floor wax — my first classroom. I wanted to be the teacher so badly.",at:4},
+      m5:{text:"Sunscreen! The thick white kind Lola made us wear every summer at the beach. I complained every single time and now I miss it.",at:5},
+      m6:{text:"Pandesal from the bakery at 5 in the morning. I would carry it home warm inside my jacket like a secret.",at:6},
+      m7:{text:"Rain on warm pavement right before a storm. We would race to bring the laundry in and always lose.",at:7}
+    },
+    reactions:{m6:{"❤️":["m3","m5","m1"]}, m5:{"😂":["m6","m4"]}}
+  };
+  days[now.dateKey] = {
+    q:{t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"]},
+    answers:{m1:{choice:1,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0},m6:{choice:2,at:0}},
+    reactions:{}
+  };
+  return {v:1, setup:true, familyName:"The Moreno family", tz: now.tz, revealHour:18,
+    createdAt: shift(-11), groups:[g1,g2,g3], days:days};
+}
+
+/* ---------------- actions ---------------- */
+document.addEventListener("input", function(ev){
+  var t = ev.target;
+  if(t && t.id === "freetext") draftText = t.value;
+});
+document.addEventListener("click", function(ev){
+  var el = ev.target.closest("[data-act]");
+  if(!el) return;
+  var act = el.getAttribute("data-act");
+
+  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; render(); }
+  else if(act==="gotofamily"){ view="family"; render(); }
+  else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
+  else if(act==="switchme"){
+    if(sampleMode){ sampleMe=null; render(); return; }
+    try{ localStorage.removeItem(LS_ME); }catch(_e){}
+    render();
+  }
+  else if(act==="pickopt"){ draftChoice = +el.getAttribute("data-i"); render(); }
+  else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; render(); }
+  else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; render(); }
+  else if(act==="submit"){
+    var me = getMe(); if(!me) return;
+    var dateKey = famParts().dateKey;
+    var d = ensureDay(dateKey);
+    var q = d.q;
+    if(q.t==="poll"){
+      var prev = d.answers[me.id];
+      var sel = draftChoice!=null ? draftChoice : (prev ? prev.choice : null);
+      if(sel==null) return;
+      d.answers[me.id] = {choice:sel, at:Date.now()};
+    } else {
+      var ta = document.getElementById("freetext");
+      var txt = (ta ? ta.value : draftText).trim();
+      if(!txt){ toast("Write a little something first"); return; }
+      d.answers[me.id] = {text:txt, at:Date.now()};
+    }
+    editingAnswer=false; draftText=""; draftChoice=null;
+    save();
+  }
+  else if(act==="react"){
+    var me2 = getMe(); if(!me2 || readOnly) return;
+    var d2 = ensureDay(el.getAttribute("data-day"));
+    var tId = el.getAttribute("data-t"), em = el.getAttribute("data-e");
+    var slot = d2.reactions[tId] = d2.reactions[tId] || {};
+    var arr = slot[em] = slot[em] || [];
+    var ix = arr.indexOf(me2.id);
+    if(ix>=0) arr.splice(ix,1); else arr.push(me2.id);
+    if(!arr.length) delete slot[em];
+    save();
+  }
+  else if(act==="savefam"){
+    var nm = document.getElementById("famname"), tz = document.getElementById("famtz");
+    if(nm && nm.value.trim()) state.familyName = nm.value.trim();
+    if(tz) state.tz = tz.value;
+    toast("Saved"); save();
+  }
+  else if(act==="addmember"){
+    var gid = el.getAttribute("data-g");
+    var inp = document.getElementById("nm-"+gid);
+    var name = inp ? inp.value.trim() : "";
+    if(!name) return;
+    var g = state.groups.find(function(x){return x.id===gid;});
+    if(g){ g.members.push({id:uid(), name:name}); save(); }
+  }
+  else if(act==="addgroup"){
+    var gi = document.getElementById("newgroup");
+    var gn = gi ? gi.value.trim() : "";
+    if(!gn) return;
+    state.groups.push({id:uid(), name:gn, members:[]});
+    save();
+  }
+  /* setup actions */
+  else if(act==="su-addgroup"){ var c=collectSetup(); state.familyName=c.name; setupGroups.push({name:"",names:""}); render(); }
+  else if(act==="su-rmgroup"){ var c2=collectSetup(); state.familyName=c2.name; setupGroups.splice(+el.getAttribute("data-i"),1); render(); }
+  else if(act==="su-start"){
+    var c3 = collectSetup();
+    if(!c3.name){ toast("Give the family a name"); return; }
+    var groups = [];
+    setupGroups.forEach(function(g){
+      var names = g.names.split("\n").map(function(s){return s.trim();}).filter(Boolean);
+      if(!g.name.trim() || !names.length) return;
+      groups.push({id:uid(), name:g.name.trim(), members:names.map(function(n){return {id:uid(), name:n};})});
+    });
+    if(!groups.length){ toast("Add at least one group with people in it"); return; }
+    state.familyName = c3.name;
+    state.tz = c3.tz;
+    state.setup = true;
+    state.createdAt = famParts().dateKey;
+    save();
+  }
+  else if(act==="loadsample"){
+    sampleMode = true; sampleMe = null;
+    state = loadSample();
+    view = "today"; render();
+  }
+  else if(act==="exitsample"){
+    sampleMode = false; sampleMe = null;
+    state = JSON.parse(REAL_STATE_JSON);
+    view = "today"; render();
+  }
+});
+
+/* countdown tick — light update; full re-render only when the lock opens */
+setInterval(function(){
+  if(!state.setup) return;
+  var active = document.activeElement;
+  var typing = active && (active.tagName==="TEXTAREA" || active.tagName==="INPUT");
+  var cdEl = document.querySelector("[data-countdown]");
+  if(cdEl){
+    var me = getMe();
+    if(me && isUnlocked(famParts().dateKey, me.group)){ if(!typing) render(); return; }
+    var mins = minutesToReveal();
+    cdEl.textContent = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
+  }
+}, 30000);
+
+render();
+})();
+</script>
