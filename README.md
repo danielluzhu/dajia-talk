@@ -3,16 +3,16 @@
 One question a day, answered by the whole family.
 
 Same Table is a daily-question app for a family spread across the world. Every
-day, every group (a household or branch of the family) gets the same question —
-a food debate, a fond memory, a would-you-rather. Answers stay sealed until
-everyone in a group has answered, or until 6:00 PM on the shared "family clock",
-whichever comes first. Then the whole table opens:
+day, everyone gets the same question — a food debate, a fond memory, a
+would-you-rather. Answers stay sealed until the whole family has answered, or
+until 6:00 PM on the shared "family clock", whichever comes first. Then the
+table opens:
 
 - **Polls** reveal the global vote breakdown — counts, percentages, and who
   voted for what, by name.
-- **Free-form questions** reveal everyone's answers as letters grouped by
-  household, plus a "Common threads" card highlighting words that came up
-  across multiple people.
+- **Free-form questions** reveal everyone's answers as letters, plus a
+  "Common threads" card highlighting words that came up across multiple
+  people.
 - After the reveal, anyone can react (❤️ 😂 🥹) to an answer, and every past
   day stays browsable in the archive.
 
@@ -20,7 +20,7 @@ whichever comes first. Then the whole table opens:
 
 The entire app is one file, [`same-table.html`](same-table.html) — no build
 step, no server, no dependencies. It is deployed as a Claude Artifact with the
-`artifact` runtime capability: the page embeds its state (groups, answers,
+`artifact` runtime capability: the page embeds its state (members, answers,
 reactions) as JSON and saves a new version of itself whenever someone answers,
 so everyone who opens the shared link sees the same living record.
 

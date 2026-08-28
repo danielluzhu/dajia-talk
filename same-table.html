@@ -211,8 +211,6 @@
   .setuphero{text-align:center;margin:44px 0 30px}
   .setuphero h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:34px;margin:0 0 10px;line-height:1.15;text-wrap:balance}
   .setuphero p{color:var(--ink-soft);max-width:46ch;margin:0 auto;font-size:15.5px}
-  .groupbuilder{border:1px dashed var(--line);border-radius:12px;padding:14px 16px;margin-top:12px}
-  .groupbuilder .rm{float:right}
 
   /* ---------- identity ---------- */
   .whoami{margin-top:30px}
@@ -240,7 +238,7 @@
 
 <div class="wrap" id="app" aria-live="polite"></div>
 
-<script type="application/json" id="state">{"v":1,"setup":false,"familyName":"","tz":null,"revealHour":18,"createdAt":null,"groups":[],"days":{}}</script>
+<script type="application/json" id="state">{"v":2,"setup":false,"familyName":"","tz":null,"revealHour":18,"createdAt":null,"members":[],"days":{}}</script>
 
 <script>
 (function(){
@@ -248,6 +246,12 @@
 var TEMPLATE = "<!doctype html>\n" + document.documentElement.outerHTML;
 
 var state = JSON.parse(document.getElementById("state").textContent);
+/* v1 states kept members inside groups; flatten them */
+if(!state.members){
+  state.members = [];
+  (state.groups||[]).forEach(function(g){ (g.members||[]).forEach(function(m){ state.members.push(m); }); });
+  delete state.groups;
+}
 var REAL_STATE_JSON = JSON.stringify(state);
 
 /* ---------------- question bank ---------------- */
@@ -344,11 +348,7 @@ function dayNumber(dateKey){
 }
 
 /* ---------------- state helpers ---------------- */
-function allMembers(){
-  var out=[]; state.groups.forEach(function(g){ g.members.forEach(function(m){ out.push({id:m.id,name:m.name,group:g}); }); });
-  return out;
-}
-function memberById(id){ return allMembers().find(function(m){return m.id===id;}) || null; }
+function memberById(id){ return state.members.find(function(m){return m.id===id;}) || null; }
 function day(dateKey){ return state.days[dateKey] || {answers:{}, reactions:{}}; }
 function ensureDay(dateKey){
   if(!state.days[dateKey]) state.days[dateKey] = {q:questionForDate(dateKey), answers:{}, reactions:{}};
@@ -356,17 +356,15 @@ function ensureDay(dateKey){
   if(!state.days[dateKey].reactions) state.days[dateKey].reactions = {};
   return state.days[dateKey];
 }
-function groupAnswered(g, dateKey){
+function familyAnswered(dateKey){
   var d = day(dateKey);
-  return g.members.length>0 && g.members.every(function(m){ return !!d.answers[m.id]; });
+  return state.members.length>0 && state.members.every(function(m){ return !!d.answers[m.id]; });
 }
-function isUnlocked(dateKey, viewerGroup){
+function isUnlocked(dateKey){
   var now = famParts();
   if(dateKey < now.dateKey) return true;                 /* past days are always open */
   if(now.hour >= (state.revealHour||18)) return true;    /* 6:00 PM at the family table */
-  if(viewerGroup && groupAnswered(viewerGroup, dateKey)) return true;
-  if(!viewerGroup && state.groups.length && state.groups.every(function(g){return groupAnswered(g,dateKey);})) return true;
-  return false;
+  return familyAnswered(dateKey);                        /* the whole family is in */
 }
 function minutesToReveal(){
   var now = famParts();
@@ -493,10 +491,8 @@ function renderHeader(me){
 function renderWhoAmI(){
   var h = '<div class="whoami"><div class="sectionhead">Who are you?</div>' +
     '<p class="hint">Pick yourself once on this device — your answers will be signed with this name.</p>';
-  state.groups.forEach(function(g){
-    h += '<div style="margin-top:14px"><div class="gname">' + esc(g.name) + '</div><div class="grid">' +
-      g.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") + '</div></div>';
-  });
+  h += '<div class="grid">' +
+    state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") + '</div>';
   h += '<div style="margin-top:22px" class="hint">Not listed? ' +
     '<button class="linkbtn" data-act="gotofamily">Add yourself in Family</button></div></div>';
   return h;
@@ -506,7 +502,7 @@ function renderDay(dateKey, me, isToday){
   var q = questionForDate(dateKey);
   var d = day(dateKey);
   var myAns = me ? d.answers[me.id] : null;
-  var unlocked = isUnlocked(dateKey, me && me.group);
+  var unlocked = isUnlocked(dateKey);
   var clock = famParts();
   var h = "";
 
@@ -521,7 +517,7 @@ function renderDay(dateKey, me, isToday){
        '<span>' + (q.t==="poll" ? "Poll" : "Open answer") + '</span></div>';
   h += '<h1 class="q">' + esc(q.q) + '</h1>';
   if(!isToday) h += '<p class="qsub">' + prettyDate(dateKey, {weekday:"long", year:"numeric", month:"long", day:"numeric"}) + '</p>';
-  else h += '<p class="qsub">Everyone gets this question today. Answers open when your whole group is in — or at ' + revealLabel() + '.</p>';
+  else h += '<p class="qsub">Everyone gets this question today. Answers open when the whole family is in — or at ' + revealLabel() + '.</p>';
 
   /* composer / my answer */
   if(isToday && !readOnly){
@@ -547,7 +543,7 @@ function renderDay(dateKey, me, isToday){
     var mins = minutesToReveal();
     var cd = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
     h += '<div class="card lock"><div class="sectionhead">Answers are sealed</div>' +
-      '<div class="big">The table opens when everyone in ' + esc(me.group.name) + ' has answered</div>' +
+      '<div class="big">The table opens when everyone in ' + esc(state.familyName) + ' has answered</div>' +
       '<div class="hint">or at ' + revealLabel() + ' — <span class="count mono" data-countdown>' + cd + '</span> from now, whichever comes first.</div></div>';
   }
   return h;
@@ -578,25 +574,20 @@ function renderComposer(q, myAns){
 
 function renderPresence(dateKey, me){
   var d = day(dateKey);
-  var myGid = me ? me.group.id : null;
-  var groups = state.groups.slice().sort(function(a,b){ return (a.id===myGid?-1:0)-(b.id===myGid?-1:0); });
-  return groups.map(function(g){
-    return '<div class="grouprow"><span class="gname">' + esc(g.name) + '</span><span class="chips">' +
-      g.members.map(function(m){
-        var done = !!d.answers[m.id];
-        return '<span class="chip' + (done?" done":"") + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>';
-      }).join("") + '</span></div>';
-  }).join("");
+  var n = state.members.filter(function(m){ return !!d.answers[m.id]; }).length;
+  return '<div class="grouprow"><span class="gname mono">' + n + ' of ' + state.members.length + ' in</span><span class="chips">' +
+    state.members.map(function(m){
+      var done = !!d.answers[m.id];
+      return '<span class="chip' + (done?" done":"") + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>';
+    }).join("") + '</span></div>';
 }
 
 function renderReveal(dateKey, q, me, isToday){
   var d = day(dateKey);
   var entries = [];
-  state.groups.forEach(function(g){
-    g.members.forEach(function(m){
-      var a = d.answers[m.id];
-      if(a) entries.push({id:m.id, name:m.name, group:g.name, ans:a});
-    });
+  state.members.forEach(function(m){
+    var a = d.answers[m.id];
+    if(a) entries.push({id:m.id, name:m.name, ans:a});
   });
   if(!entries.length){
     return '<div class="card lock"><div class="big">No answers made it in ' + (isToday?'yet':'this day') + '.</div>' +
@@ -645,17 +636,13 @@ function renderLetters(dateKey, q, entries, me){
     if(bits.length) h += '<div class="foot">' + bits.join(" · ") + '</div>';
     h += '</div>';
   }
-  var byGroup = {};
-  entries.forEach(function(e){ (byGroup[e.group]=byGroup[e.group]||[]).push(e); });
-  Object.keys(byGroup).forEach(function(gname){
-    h += '<div class="lettergroup"><div class="sectionhead">' + esc(gname) + '</div>';
-    byGroup[gname].forEach(function(e){
-      var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
-      h += '<div class="letter"><div class="from"><span class="who">' + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
-        '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
-    });
-    h += '</div>';
+  h += '<div class="lettergroup">';
+  entries.forEach(function(e){
+    var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
+    h += '<div class="letter"><div class="from"><span class="who">' + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
+      '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
   });
+  h += '</div>';
   return h;
 }
 
@@ -692,7 +679,7 @@ function renderArchive(){
 function renderFamily(me){
   var h = '<div style="margin-top:26px" class="stack">';
   h += '<div class="card"><div class="sectionhead">' + esc(state.familyName) + '</div>' +
-    '<p class="hint">One question a day for everyone, revealed together at ' + revealLabel() + ' (' + esc(state.tz||"local time") + ') — or the moment a whole group is in.</p>';
+    '<p class="hint">One question a day for everyone, revealed together at ' + revealLabel() + ' (' + esc(state.tz||"local time") + ') — or the moment everyone has answered.</p>';
   if(!readOnly){
     h += '<div class="field"><label for="famname">Family name</label><input type="text" id="famname" value="' + esc(state.familyName) + '"></div>' +
       '<div class="field"><label for="famtz">The family clock (timezone for “today” and the ' + revealLabel() + ' reveal)</label>' + tzSelect("famtz", state.tz) + '</div>' +
@@ -700,22 +687,13 @@ function renderFamily(me){
   }
   h += '</div>';
 
-  state.groups.forEach(function(g){
-    h += '<div class="card"><div class="sectionhead">' + esc(g.name) + ' · ' + g.members.length + '</div><div class="chips" style="margin-bottom:10px">' +
-      g.members.map(function(m){ return '<span class="chip' + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>'; }).join("") + '</div>';
-    if(!readOnly){
-      h += '<div class="btnrow"><input type="text" id="nm-' + g.id + '" placeholder="Add a person" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
-        '<button class="btn ghost small" data-act="addmember" data-g="' + g.id + '">Add</button></div>';
-    }
-    h += '</div>';
-  });
-
+  h += '<div class="card"><div class="sectionhead">At the table · ' + state.members.length + '</div><div class="chips" style="margin-bottom:10px">' +
+    state.members.map(function(m){ return '<span class="chip' + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>'; }).join("") + '</div>';
   if(!readOnly){
-    h += '<div class="card"><div class="sectionhead">New group</div>' +
-      '<p class="hint">A group is a household or a branch of the family — the people whose answers unlock together.</p>' +
-      '<div class="btnrow"><input type="text" id="newgroup" placeholder="e.g. The Toronto house" style="flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
-      '<button class="btn ghost small" data-act="addgroup">Create group</button></div></div>';
+    h += '<div class="btnrow"><input type="text" id="newmember" placeholder="Add a person" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
+      '<button class="btn ghost small" data-act="addmember">Add</button></div>';
   }
+  h += '</div>';
   h += '</div>';
   return h;
 }
@@ -732,33 +710,18 @@ function tzSelect(id, val){
 }
 
 /* ---------------- setup ---------------- */
-var setupGroups = [{name:"", names:""},{name:"", names:""}];
 function renderSetup(){
   var h = '<header><div class="wordmark">Same Table<span class="dot">.</span></div></header>';
   h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
-    '<p>Every day, every group gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until everyone in a group is in, or ' + revealLabel() + ', whichever comes first. Then the whole table opens.</p></div>';
+    '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or ' + revealLabel() + ', whichever comes first. Then the table opens.</p></div>';
   h += '<div class="card"><div class="sectionhead">Set the table</div>' +
     '<div class="field"><label for="su-name">Family name</label><input type="text" id="su-name" placeholder="e.g. The Moreno family" value="' + esc(state.familyName) + '"></div>' +
     '<div class="field"><label for="su-tz">The family clock</label>' + tzSelect("su-tz", state.tz) +
-    '<div class="hint" style="margin-top:5px">“Today” and the ' + revealLabel() + ' reveal follow this one clock, wherever everyone lives.</div></div>';
-  setupGroups.forEach(function(g,i){
-    h += '<div class="groupbuilder">' + (setupGroups.length>1 ? '<button class="linkbtn rm" data-act="su-rmgroup" data-i="' + i + '">remove</button>' : "") +
-      '<div class="field" style="margin-top:0"><label>Group ' + (i+1) + ' name</label><input type="text" data-su-gname="' + i + '" placeholder="e.g. The Lisbon crew" value="' + esc(g.name) + '"></div>' +
-      '<div class="field"><label>Who’s in it? (one name per line)</label><textarea data-su-gnames="' + i + '" placeholder="Mom&#10;Tomás">' + esc(g.names) + '</textarea></div></div>';
-  });
-  h += '<div class="btnrow"><button class="btn ghost small" data-act="su-addgroup">+ Another group</button></div>';
+    '<div class="hint" style="margin-top:5px">“Today” and the ' + revealLabel() + ' reveal follow this one clock, wherever everyone lives.</div></div>' +
+    '<div class="field"><label for="su-names">Who’s at the table? (one name per line)</label><textarea id="su-names" placeholder="Mom&#10;Tomás&#10;Lola Carmen"></textarea></div>';
   h += '<div class="btnrow" style="margin-top:20px"><button class="btn" data-act="su-start">Set the table</button>' +
     '<button class="linkbtn" data-act="loadsample">or explore a sample family first</button></div></div>';
   return h;
-}
-function collectSetup(){
-  setupGroups.forEach(function(g,i){
-    var n = document.querySelector('[data-su-gname="' + i + '"]');
-    var t = document.querySelector('[data-su-gnames="' + i + '"]');
-    if(n) g.name = n.value; if(t) g.names = t.value;
-  });
-  var nameEl = document.getElementById("su-name"), tzEl = document.getElementById("su-tz");
-  return {name: nameEl?nameEl.value.trim():"", tz: tzEl?tzEl.value:null};
 }
 
 /* ---------------- sample family ---------------- */
@@ -769,9 +732,10 @@ function loadSample(){
     var d = new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); d.setUTCDate(d.getUTCDate()+days);
     return d.toISOString().slice(0,10);
   }
-  var g1={id:"g1",name:"The Lisbon crew",members:[{id:"m1",name:"Marisol"},{id:"m2",name:"Tomás"}]};
-  var g2={id:"g2",name:"The Toronto house",members:[{id:"m3",name:"Dani"},{id:"m4",name:"Priya"},{id:"m5",name:"Sam"}]};
-  var g3={id:"g3",name:"Manila",members:[{id:"m6",name:"Lola Carmen"},{id:"m7",name:"Rico"}]};
+  var members = [
+    {id:"m1",name:"Marisol"},{id:"m2",name:"Tomás"},{id:"m3",name:"Dani"},
+    {id:"m4",name:"Priya"},{id:"m5",name:"Sam"},{id:"m6",name:"Lola Carmen"},{id:"m7",name:"Rico"}
+  ];
   var days = {};
   days[shift(-2)] = {
     q:{t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"]},
@@ -793,11 +757,11 @@ function loadSample(){
   };
   days[now.dateKey] = {
     q:{t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"]},
-    answers:{m1:{choice:1,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0},m6:{choice:2,at:0}},
+    answers:{m1:{choice:1,at:0},m2:{choice:3,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0},m6:{choice:2,at:0},m7:{choice:0,at:0}},
     reactions:{}
   };
-  return {v:1, setup:true, familyName:"The Moreno family", tz: now.tz, revealHour:18,
-    createdAt: shift(-11), groups:[g1,g2,g3], days:days};
+  return {v:2, setup:true, familyName:"The Moreno family", tz: now.tz, revealHour:18,
+    createdAt: shift(-11), members:members, days:days};
 }
 
 /* ---------------- actions ---------------- */
@@ -858,35 +822,22 @@ document.addEventListener("click", function(ev){
     toast("Saved"); save();
   }
   else if(act==="addmember"){
-    var gid = el.getAttribute("data-g");
-    var inp = document.getElementById("nm-"+gid);
+    var inp = document.getElementById("newmember");
     var name = inp ? inp.value.trim() : "";
     if(!name) return;
-    var g = state.groups.find(function(x){return x.id===gid;});
-    if(g){ g.members.push({id:uid(), name:name}); save(); }
-  }
-  else if(act==="addgroup"){
-    var gi = document.getElementById("newgroup");
-    var gn = gi ? gi.value.trim() : "";
-    if(!gn) return;
-    state.groups.push({id:uid(), name:gn, members:[]});
+    state.members.push({id:uid(), name:name});
     save();
   }
   /* setup actions */
-  else if(act==="su-addgroup"){ var c=collectSetup(); state.familyName=c.name; setupGroups.push({name:"",names:""}); render(); }
-  else if(act==="su-rmgroup"){ var c2=collectSetup(); state.familyName=c2.name; setupGroups.splice(+el.getAttribute("data-i"),1); render(); }
   else if(act==="su-start"){
-    var c3 = collectSetup();
-    if(!c3.name){ toast("Give the family a name"); return; }
-    var groups = [];
-    setupGroups.forEach(function(g){
-      var names = g.names.split("\n").map(function(s){return s.trim();}).filter(Boolean);
-      if(!g.name.trim() || !names.length) return;
-      groups.push({id:uid(), name:g.name.trim(), members:names.map(function(n){return {id:uid(), name:n};})});
-    });
-    if(!groups.length){ toast("Add at least one group with people in it"); return; }
-    state.familyName = c3.name;
-    state.tz = c3.tz;
+    var nameEl = document.getElementById("su-name"), tzEl = document.getElementById("su-tz"), namesEl = document.getElementById("su-names");
+    var famName = nameEl ? nameEl.value.trim() : "";
+    if(!famName){ toast("Give the family a name"); return; }
+    var names = (namesEl ? namesEl.value : "").split("\n").map(function(s){return s.trim();}).filter(Boolean);
+    if(!names.length){ toast("Add at least one person"); return; }
+    state.familyName = famName;
+    state.tz = tzEl ? tzEl.value : null;
+    state.members = names.map(function(n){ return {id:uid(), name:n}; });
     state.setup = true;
     state.createdAt = famParts().dateKey;
     save();
@@ -910,8 +861,7 @@ setInterval(function(){
   var typing = active && (active.tagName==="TEXTAREA" || active.tagName==="INPUT");
   var cdEl = document.querySelector("[data-countdown]");
   if(cdEl){
-    var me = getMe();
-    if(me && isUnlocked(famParts().dateKey, me.group)){ if(!typing) render(); return; }
+    if(isUnlocked(famParts().dateKey)){ if(!typing) render(); return; }
     var mins = minutesToReveal();
     cdEl.textContent = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
   }
