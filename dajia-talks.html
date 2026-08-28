@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Same Table</title>
+<title>Dajia Talks</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Karla:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap">
 <style>
@@ -397,11 +397,12 @@ function save(){
 }
 
 /* ---------------- identity (per device) ---------------- */
-var LS_ME = "sametable.me";
+var LS_ME = "dajiatalks.me";
 var sampleMe = null;
 function getMe(){
   var id = null;
-  try{ id = localStorage.getItem(LS_ME); }catch(_e){}
+  /* fall back to the pre-rename key so nobody has to re-pick themselves */
+  try{ id = localStorage.getItem(LS_ME) || localStorage.getItem("sametable.me"); }catch(_e){}
   if(sampleMode) id = sampleMe;
   return id ? memberById(id) : null;
 }
@@ -470,14 +471,14 @@ function render(){
     html += '<div class="backrow"><button class="linkbtn" data-act="goto" data-v="archive">← All days</button></div>';
     html += renderDay(view.slice(4), me, false);
   }
-  html += '<div class="footer">Same Table · one question a day, answered together</div>';
+  html += '<div class="footer">Dajia Talks · one question a day, answered together</div>';
   app.innerHTML = html;
 }
 
 function renderHeader(me){
   var tabs = [["today","Today"],["archive","Past days"],["family","Family"]];
   var cur = view.indexOf("day:")===0 ? "archive" : view;
-  var h = '<header><div class="wordmark">Same Table<span class="dot">.</span></div>' +
+  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div>' +
     '<div class="famname">' + esc(state.familyName) + (me ? '<br><span class="mono" style="font-size:11px">you are ' + esc(me.name) + ' · <button class="linkbtn" style="font-size:11px" data-act="switchme">switch</button></span>' : "") + '</div></header>';
   h += '<nav class="tabs">' + tabs.map(function(t){
     return '<button data-act="goto" data-v="' + t[0] + '" class="' + (cur===t[0]?"on":"") + '">' + t[1] + '</button>';
@@ -711,7 +712,7 @@ function tzSelect(id, val){
 
 /* ---------------- setup ---------------- */
 function renderSetup(){
-  var h = '<header><div class="wordmark">Same Table<span class="dot">.</span></div></header>';
+  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div></header>';
   h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
     '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or ' + revealLabel() + ', whichever comes first. Then the table opens.</p></div>';
   h += '<div class="card"><div class="sectionhead">Set the table</div>' +
@@ -779,7 +780,7 @@ document.addEventListener("click", function(ev){
   else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
   else if(act==="switchme"){
     if(sampleMode){ sampleMe=null; render(); return; }
-    try{ localStorage.removeItem(LS_ME); }catch(_e){}
+    try{ localStorage.removeItem(LS_ME); localStorage.removeItem("sametable.me"); }catch(_e){}
     render();
   }
   else if(act==="pickopt"){ draftChoice = +el.getAttribute("data-i"); render(); }
