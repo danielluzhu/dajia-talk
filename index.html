@@ -254,6 +254,142 @@ if(!state.members){
 }
 var REAL_STATE_JSON = JSON.stringify(state);
 
+/* ---------------- mode: claude artifact vs web rooms ---------------- */
+/* Inside the claude.ai artifact runtime the page saves itself (one family per
+   artifact). Hosted on the open web it uses family rooms instead: shared state
+   in a Firebase Realtime Database, joined by link. */
+var IS_ARTIFACT = !!(window.claude && window.claude.use);
+
+/* Family-rooms backend: the URL of a Firebase Realtime Database, e.g.
+   "https://dajia-talk-default-rtdb.firebaseio.com". See README "Family rooms". */
+var DB_URL = "";
+/* local development: dev-server.py mocks the same endpoints on this origin */
+if(!DB_URL && /^localhost(:\d+)?$/.test(location.host)) DB_URL = location.origin;
+
+function roomsEnabled(){ return !IS_ARTIFACT && !!DB_URL; }
+function dbPath(id){ return DB_URL.replace(/\/+$/,"") + "/rooms/" + encodeURIComponent(id) + ".json"; }
+function apiLoad(id){
+  return fetch(dbPath(id)).then(function(r){ if(!r.ok) throw new Error("load " + r.status); return r.json(); });
+}
+function apiSave(id, data){
+  return fetch(dbPath(id), {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)})
+    .then(function(r){ if(!r.ok) throw new Error("save " + r.status); });
+}
+
+var roomId = null, roomLoading = false, roomError = null, es = null, pollTimer = null, refreshTimer = null;
+
+function normalizeRoom(room){
+  /* the database prunes empty objects, so restore them */
+  room.members = room.members || [];
+  room.days = room.days || {};
+  Object.keys(room.days).forEach(function(k){
+    room.days[k].answers = room.days[k].answers || {};
+    room.days[k].reactions = room.days[k].reactions || {};
+  });
+  room.setup = true;
+  return room;
+}
+
+/* fold my local changes onto the freshest copy so two people saving at once
+   don't wipe each other's answers */
+function mergeRoom(remote, mine){
+  var out = remote;
+  out.familyName = mine.familyName; out.tz = mine.tz; out.revealHour = mine.revealHour;
+  out.createdAt = out.createdAt || mine.createdAt;
+  var ids = {};
+  out.members.forEach(function(m){ ids[m.id] = true; });
+  (mine.members || []).forEach(function(m){ if(!ids[m.id]) out.members.push(m); });
+  Object.keys(mine.days || {}).forEach(function(k){
+    var md = mine.days[k], rd = out.days[k];
+    if(!rd){ out.days[k] = md; return; }
+    rd.q = rd.q || md.q;
+    Object.keys(md.answers || {}).forEach(function(mid){
+      var ra = rd.answers[mid], ma = md.answers[mid];
+      if(!ra || (ma.at || 0) >= (ra.at || 0)) rd.answers[mid] = ma;
+    });
+    Object.keys(md.reactions || {}).forEach(function(t){
+      var rt = rd.reactions[t] = rd.reactions[t] || {};
+      Object.keys(md.reactions[t]).forEach(function(em){ rt[em] = md.reactions[t][em]; });
+    });
+  });
+  return out;
+}
+
+function hashRoomId(){
+  var m = /[#&]r=([A-Za-z0-9]+)/.exec(location.hash || "");
+  return m ? m[1] : null;
+}
+function inviteLink(){ return location.origin + location.pathname + "#r=" + roomId; }
+function roomsMap(){ try{ return JSON.parse(localStorage.getItem("dajiatalks.rooms") || "{}"); }catch(_e){ return {}; } }
+function rememberRoom(id, memberId, famName){
+  try{
+    var map = roomsMap();
+    var cur = map[id] || {};
+    map[id] = {me: memberId !== undefined ? memberId : (cur.me || null), name: famName || cur.name || ""};
+    localStorage.setItem("dajiatalks.rooms", JSON.stringify(map));
+  }catch(_e){}
+}
+
+function bootRoom(){
+  roomError = null;
+  var id = hashRoomId();
+  if(!id){ roomId = null; stopSync(); render(); return; }
+  roomId = id;
+  if(!roomsEnabled()){ render(); return; }
+  roomLoading = true; render();
+  apiLoad(id).then(function(room){
+    roomLoading = false;
+    if(!room){ roomError = "notfound"; render(); return; }
+    state = normalizeRoom(room);
+    rememberRoom(id, undefined, state.familyName);
+    render(); startSync();
+  }, function(){ roomLoading = false; roomError = "network"; render(); });
+}
+
+function scheduleRefresh(){
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(function(){
+    if(!roomId || sampleMode || !roomsEnabled()) return;
+    apiLoad(roomId).then(function(room){
+      if(!room) return;
+      room = normalizeRoom(room);
+      if(JSON.stringify(room) === JSON.stringify(state)) return;
+      state = room;
+      var active = document.activeElement;
+      var typing = active && (active.tagName === "TEXTAREA" || (active.tagName === "INPUT" && active.type === "text"));
+      if(!typing) render();
+    }, function(){});
+  }, 250);
+}
+function startSync(){
+  stopSync();
+  if(window.EventSource){
+    try{
+      es = new EventSource(dbPath(roomId));
+      es.addEventListener("put", scheduleRefresh);
+      es.addEventListener("patch", scheduleRefresh);
+      es.onerror = function(){ if(es && es.readyState === 2){ es = null; startPoll(); } };
+      return;
+    }catch(_e){}
+  }
+  startPoll();
+}
+function startPoll(){
+  clearInterval(pollTimer);
+  pollTimer = setInterval(scheduleRefresh, 15000);
+}
+function stopSync(){
+  if(es){ es.close(); es = null; }
+  clearInterval(pollTimer); pollTimer = null;
+}
+window.addEventListener("hashchange", function(){
+  if(IS_ARTIFACT) return;
+  if(hashRoomId() !== roomId){ sampleMode = false; sampleMe = null; view = "today"; bootRoom(); }
+});
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden && roomId && !sampleMode) scheduleRefresh();
+});
+
 /* ---------------- question bank ---------------- */
 var QBANK = [
   {t:"poll", tag:"Food fight", q:"Rice or noodles — if you had to pick one forever?", o:["Rice","Noodles"]},
@@ -328,8 +464,8 @@ function questionForDate(dateKey){
 }
 
 /* ---------------- family clock ---------------- */
-function famParts(){
-  var tz = state.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+function famParts(tzArg){
+  var tz = tzArg || state.tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
   var f = new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
   var p = {};
   f.formatToParts(new Date()).forEach(function(x){ p[x.type]=x.value; });
@@ -385,31 +521,57 @@ function withState(st){
 function save(){
   render(); /* optimistic */
   if(sampleMode) return;
-  if(!artifactNS){ toast("Preview mode — changes stay on this device"); return; }
-  artifactNS.publish(withState(state)).then(function(){},
-    function(e){
-      var code = e && e.code;
-      if(code === "conflict"){ /* someone else saved first; the page reloads to their version */ return; }
-      if(code === "not_granted" || code === "not_writer"){ readOnly = true; toast("View-only access — ask the family to share edit access"); render(); return; }
-      toast("Couldn't save — check your connection and try again");
-      render();
-    });
+  if(IS_ARTIFACT){
+    if(!artifactNS){ toast("Preview mode — changes stay on this device"); return; }
+    artifactNS.publish(withState(state)).then(function(){},
+      function(e){
+        var code = e && e.code;
+        if(code === "conflict"){ /* someone else saved first; the page reloads to their version */ return; }
+        if(code === "not_granted" || code === "not_writer"){ readOnly = true; toast("View-only access — ask the family to share edit access"); render(); return; }
+        toast("Couldn't save — check your connection and try again");
+        render();
+      });
+    return;
+  }
+  if(!roomId || !roomsEnabled()){ toast("Not connected to a family room"); return; }
+  var mine = state;
+  apiLoad(roomId).then(function(remote){
+    if(remote) state = mergeRoom(normalizeRoom(remote), mine);
+    return apiSave(roomId, state);
+  }).then(function(){ render(); }, function(){
+    toast("Couldn't save — check your connection and try again");
+  });
 }
 
 /* ---------------- identity (per device) ---------------- */
 var LS_ME = "dajiatalks.me";
 var sampleMe = null;
 function getMe(){
+  if(sampleMode) return sampleMe ? memberById(sampleMe) : null;
   var id = null;
-  /* fall back to the pre-rename key so nobody has to re-pick themselves */
-  try{ id = localStorage.getItem(LS_ME) || localStorage.getItem("sametable.me"); }catch(_e){}
-  if(sampleMode) id = sampleMe;
+  if(IS_ARTIFACT){
+    /* fall back to the pre-rename key so nobody has to re-pick themselves */
+    try{ id = localStorage.getItem(LS_ME) || localStorage.getItem("sametable.me"); }catch(_e){}
+  } else if(roomId){
+    id = (roomsMap()[roomId] || {}).me;
+  }
   return id ? memberById(id) : null;
 }
 function setMe(id){
   if(sampleMode){ sampleMe = id; render(); return; }
-  try{ localStorage.setItem(LS_ME, id); }catch(_e){}
+  if(IS_ARTIFACT){
+    try{ localStorage.setItem(LS_ME, id); }catch(_e){}
+  } else {
+    rememberRoom(roomId, id, state.familyName);
+  }
   render();
+}
+function forgetMe(){
+  if(IS_ARTIFACT){
+    try{ localStorage.removeItem(LS_ME); localStorage.removeItem("sametable.me"); }catch(_e){}
+  } else {
+    rememberRoom(roomId, null, state.familyName);
+  }
 }
 
 /* ---------------- trends (free-form reveal) ---------------- */
@@ -456,11 +618,21 @@ function toast(msg){
 function uid(){ return Math.random().toString(36).slice(2,9); }
 
 function render(){
-  if(!state.setup){ app.innerHTML = renderSetup(); return; }
+  if(!sampleMode){
+    if(IS_ARTIFACT){
+      if(!state.setup){ app.innerHTML = renderSetup(); return; }
+    } else {
+      if(!roomId){ app.innerHTML = renderLanding(); return; }
+      if(!roomsEnabled()){ app.innerHTML = renderNoBackend(); return; }
+      if(roomLoading){ app.innerHTML = renderShell("Setting the table…"); return; }
+      if(roomError){ app.innerHTML = renderRoomError(); return; }
+      if(!state.setup){ app.innerHTML = renderShell("…"); return; }
+    }
+  }
   var me = getMe();
   var html = renderHeader(me);
   if(!me && view === "today"){
-    html += renderWhoAmI();
+    html += (IS_ARTIFACT || sampleMode) ? renderWhoAmI() : renderJoin();
   } else if(view === "today"){
     html += renderDay(famParts().dateKey, me, true);
   } else if(view === "archive"){
@@ -484,8 +656,8 @@ function renderHeader(me){
     return '<button data-act="goto" data-v="' + t[0] + '" class="' + (cur===t[0]?"on":"") + '">' + t[1] + '</button>';
   }).join("") + '</nav>';
   if(sampleMode) h += '<div class="banner">You’re exploring a <b>sample family</b> — nothing is saved. <button class="linkbtn" data-act="exitsample">Exit sample</button></div>';
-  else if(nsResolved && !artifactNS) h += '<div class="banner">Preview mode: this device only. Open the published page on claude.ai so answers save for everyone.</div>';
-  else if(readOnly) h += '<div class="banner">You have view-only access. Ask the family to share this page with edit access so you can answer.</div>';
+  else if(IS_ARTIFACT && nsResolved && !artifactNS) h += '<div class="banner">Preview mode: this device only. Open the published page on claude.ai so answers save for everyone.</div>';
+  else if(IS_ARTIFACT && readOnly) h += '<div class="banner">You have view-only access. Ask the family to share this page with edit access so you can answer.</div>';
   return h;
 }
 
@@ -679,6 +851,12 @@ function renderArchive(){
 
 function renderFamily(me){
   var h = '<div style="margin-top:26px" class="stack">';
+  if(!IS_ARTIFACT && !sampleMode && roomId){
+    h += '<div class="card"><div class="sectionhead">Invite the family</div>' +
+      '<p class="hint">Anyone with this link can join the table and pick their own name — no accounts needed.</p>' +
+      '<div class="btnrow"><input type="text" readonly id="invitelink" value="' + esc(inviteLink()) + '" style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit;font-size:13px">' +
+      '<button class="btn small" data-act="copylink">Copy link</button></div></div>';
+  }
   h += '<div class="card"><div class="sectionhead">' + esc(state.familyName) + '</div>' +
     '<p class="hint">One question a day for everyone, revealed together at ' + revealLabel() + ' (' + esc(state.tz||"local time") + ') — or the moment everyone has answered.</p>';
   if(!readOnly){
@@ -708,6 +886,76 @@ function tzSelect(id, val){
   return '<select id="' + id + '">' + zones.map(function(z){
     return '<option value="' + esc(z) + '"' + (z===cur?" selected":"") + '>' + esc(z.replace(/_/g," ")) + '</option>';
   }).join("") + '</select>';
+}
+
+/* ---------------- web rooms screens ---------------- */
+function renderWordmark(){
+  return '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div></header>';
+}
+function renderShell(msg){
+  return renderWordmark() + '<div class="card lock" style="margin-top:40px"><div class="big">' + esc(msg) + '</div></div>';
+}
+function renderLanding(){
+  var h = renderWordmark();
+  h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
+    '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or 6:00 PM, whichever comes first. Then the table opens.</p></div>';
+  var known = roomsMap(), ids = Object.keys(known).filter(function(k){ return known[k] && known[k].name; });
+  if(ids.length){
+    h += '<div class="card"><div class="sectionhead">Your tables</div><div class="chips">' +
+      ids.map(function(k){ return '<a class="chip" style="text-decoration:none" href="#r=' + esc(k) + '">' + esc(known[k].name) + '</a>'; }).join("") +
+      '</div></div>';
+  }
+  if(roomsEnabled()){
+    h += '<div class="card"><div class="sectionhead">Start your family’s table</div>' +
+      '<div class="field" style="margin-top:8px"><label for="rm-name">Family name</label><input type="text" id="rm-name" placeholder="e.g. The Zhu family"></div>' +
+      '<div class="field"><label for="rm-tz">The family clock</label>' + tzSelect("rm-tz", null) +
+      '<div class="hint" style="margin-top:5px">“Today” and the 6:00 PM reveal follow this one clock, wherever everyone lives.</div></div>' +
+      '<div class="field"><label for="rm-you">Your name</label><input type="text" id="rm-you" placeholder="e.g. Dan"></div>' +
+      '<div class="btnrow" style="margin-top:20px"><button class="btn" data-act="rm-create">Create the room</button>' +
+      '<button class="linkbtn" data-act="loadsample">or explore a sample family first</button></div>' +
+      '<p class="hint" style="margin-top:10px">You’ll get a link to share. Family joins with just the link and their own name — no accounts.</p></div>';
+  } else {
+    h += renderBackendNote();
+  }
+  return h;
+}
+function renderBackendNote(){
+  return '<div class="card"><div class="sectionhead">Almost ready</div>' +
+    '<p class="hint" style="font-size:14px">Family rooms need this copy of the app connected to its (free) database — a one-line setup described in the <a href="https://github.com/danielluzhu/dajia-talk#family-rooms">README</a>. ' +
+    'Until then you can <button class="linkbtn" data-act="loadsample">explore the sample family</button>.</p></div>';
+}
+function renderNoBackend(){
+  return renderWordmark() +
+    '<div class="setuphero"><h1>This invite isn’t live yet</h1>' +
+    '<p>Someone sent you a Dajia Talks room link, but this copy of the app isn’t connected to its database yet.</p></div>' +
+    renderBackendNote();
+}
+function renderRoomError(){
+  var h = renderWordmark();
+  if(roomError === "notfound"){
+    h += '<div class="setuphero"><h1>This link doesn’t lead to a table</h1>' +
+      '<p>Double-check the invite link with whoever sent it — or start a table of your own.</p></div>' +
+      '<div class="btnrow" style="justify-content:center"><a class="btn" style="text-decoration:none" href="#">Start your own</a></div>';
+  } else {
+    h += '<div class="setuphero"><h1>Can’t reach the table right now</h1>' +
+      '<p>Check your connection, then try again.</p></div>' +
+      '<div class="btnrow" style="justify-content:center"><button class="btn" data-act="rm-retry">Try again</button></div>';
+  }
+  return h;
+}
+function renderJoin(){
+  var h = '<div class="setuphero" style="margin:34px 0 24px"><h1>You’re invited to ' + esc(state.familyName) + '’s table</h1>' +
+    '<p>One question a day, answered together, revealed together. Add your name to pull up a chair.</p></div>';
+  h += '<div class="card"><div class="sectionhead">Joining as</div>' +
+    '<div class="field" style="margin-top:8px"><label for="join-name">Your name</label><input type="text" id="join-name" placeholder="e.g. Auntie Mei"></div>' +
+    '<div class="btnrow"><button class="btn" data-act="rm-join">Pull up a chair</button></div></div>';
+  if(state.members.length){
+    h += '<div class="whoami"><div class="sectionhead">Been here before?</div>' +
+      '<p class="hint">Pick yourself instead — this device will remember you.</p><div class="grid">' +
+      state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") +
+      '</div></div>';
+  }
+  return h;
 }
 
 /* ---------------- setup ---------------- */
@@ -780,7 +1028,8 @@ document.addEventListener("click", function(ev){
   else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
   else if(act==="switchme"){
     if(sampleMode){ sampleMe=null; render(); return; }
-    try{ localStorage.removeItem(LS_ME); localStorage.removeItem("sametable.me"); }catch(_e){}
+    forgetMe();
+    view = "today";
     render();
   }
   else if(act==="pickopt"){ draftChoice = +el.getAttribute("data-i"); render(); }
@@ -851,7 +1100,54 @@ document.addEventListener("click", function(ev){
   else if(act==="exitsample"){
     sampleMode = false; sampleMe = null;
     state = JSON.parse(REAL_STATE_JSON);
-    view = "today"; render();
+    view = "today";
+    if(IS_ARTIFACT) render(); else bootRoom();
+  }
+  /* web rooms actions */
+  else if(act==="rm-create"){
+    var rn = document.getElementById("rm-name"), rt = document.getElementById("rm-tz"), ry = document.getElementById("rm-you");
+    var famName2 = rn ? rn.value.trim() : "";
+    var you = ry ? ry.value.trim() : "";
+    if(!famName2){ toast("Give the family a name"); return; }
+    if(!you){ toast("Add your name"); return; }
+    var creator = {id:uid(), name:you};
+    var tzVal = rt ? rt.value : null;
+    var room = {v:2, setup:true, familyName:famName2, tz:tzVal, revealHour:18,
+      createdAt: famParts(tzVal).dateKey, members:[creator], days:{}};
+    el.disabled = true; el.textContent = "Setting the table…";
+    var newId = uid() + uid();
+    apiSave(newId, room).then(function(){
+      state = room; roomId = newId; roomError = null; roomLoading = false;
+      rememberRoom(newId, creator.id, famName2);
+      location.hash = "r=" + newId;
+      view = "family"; /* land on the invite link so they can share it right away */
+      render(); startSync();
+      toast("Room created — share the invite link");
+    }, function(){
+      el.disabled = false; el.textContent = "Create the room";
+      toast("Couldn't create the room — check your connection");
+    });
+  }
+  else if(act==="rm-join"){
+    var ji = document.getElementById("join-name");
+    var jn = ji ? ji.value.trim() : "";
+    if(!jn){ toast("Add your name"); return; }
+    var joiner = {id:uid(), name:jn};
+    state.members.push(joiner);
+    rememberRoom(roomId, joiner.id, state.familyName);
+    save();
+  }
+  else if(act==="rm-retry"){ bootRoom(); }
+  else if(act==="copylink"){
+    var link = inviteLink();
+    var copied = function(){ toast("Invite link copied"); };
+    var manual = function(){
+      var box = document.getElementById("invitelink");
+      if(box){ box.focus(); box.select(); }
+      try{ document.execCommand("copy"); copied(); }catch(_e){ toast("Copy the link from the box"); }
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(copied, manual);
+    else manual();
   }
 });
 
@@ -868,6 +1164,6 @@ setInterval(function(){
   }
 }, 30000);
 
-render();
+if(IS_ARTIFACT) render(); else bootRoom();
 })();
 </script>

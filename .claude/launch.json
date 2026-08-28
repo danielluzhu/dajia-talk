@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "same-table",
+      "name": "dajia-talk",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123"],
+      "runtimeArgs": ["dev-server.py"],
       "port": 8123
     }
   ]
