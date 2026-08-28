@@ -365,6 +365,24 @@
   .wquote{border-left:2px solid var(--line);padding:2px 0 2px 13px;margin:12px 0;font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:14.5px;line-height:1.5}
   .wquote .wname{display:block;font-style:normal;font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:10px;color:var(--ink-faint);margin-top:4px;letter-spacing:.14em;text-transform:uppercase}
   .wcap{font-size:11.5px;color:var(--ink-faint);margin-top:12px}
+
+  /* ---------- table talk ---------- */
+  .chat .msgs{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;margin:2px 0 13px;padding-right:4px}
+  .msg{display:flex;gap:9px;align-items:flex-start}
+  .msg .av{margin-top:3px}
+  .msg .mb{background:var(--surface-2);border-radius:4px 12px 12px 12px;padding:7px 12px 8px;max-width:86%}
+  .msg.mine .mb{background:var(--accent-soft)}
+  .msg .mh{display:flex;gap:8px;align-items:baseline;margin-bottom:1px}
+  .msg .mn{font-size:11.5px;font-weight:800}
+  .msg .mt{font-size:9.5px;color:var(--ink-faint)}
+  .msg .mx{display:block;font-size:14.5px;line-height:1.45;word-break:break-word}
+  .chatrow{display:flex;gap:8px}
+  .chatrow input{
+    flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;background:var(--ground);
+    color:var(--ink);padding:9px 16px;font:inherit;font-size:14.5px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .chatrow input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -440,6 +458,105 @@ function apiSave(id, data){
   }
   return fetch(dbPath(id), {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)})
     .then(function(r){ if(!r.ok) throw new Error("save " + r.status); });
+}
+
+/* ---------------- table talk (per-day chat) ---------------- */
+var chatCache = {};      /* key -> {msgs:[{id,member,text,at}], loading} */
+var chatDraft = "";
+var sampleChat = null;
+function chatOn(){ return sampleMode || (BACKEND.type === "clickhouse" && !!BACKEND.url && !!roomId); }
+function chatKey(day){ return (sampleMode ? "sample" : roomId) + "|" + day; }
+function chatEntry(day){
+  var k = chatKey(day);
+  if(!chatCache[k]) chatCache[k] = {msgs:[], loading:false, loaded:false};
+  return chatCache[k];
+}
+function loadChat(day){
+  if(!chatOn()) return;
+  if(sampleMode){
+    var se = chatEntry(day);
+    if(!se.loaded){
+      se.loaded = true;
+      if(sampleChat && sampleChat[day]) se.msgs = sampleChat[day].slice();
+    }
+    return;
+  }
+  var entry = chatEntry(day);
+  if(entry.loading) return;
+  entry.loading = true;
+  chQuery("SELECT id, member, text, toUnixTimestamp64Milli(at) AS at FROM dajia.chat WHERE room = {r:String} AND day = {d:String} ORDER BY at LIMIT 500 FORMAT JSONEachRow", {r:roomId, d:day})
+    .then(function(text){
+      entry.loading = false;
+      var server = text.trim() ? text.trim().split("\n").map(function(l){
+        var row = JSON.parse(l);
+        return {id:row.id, member:row.member, text:row.text, at:Number(row.at)};
+      }) : [];
+      var seen = {};
+      server.forEach(function(m){ seen[m.id] = true; });
+      /* keep optimistic messages the server hasn't confirmed yet */
+      entry.msgs.forEach(function(m){ if(!seen[m.id]) server.push(m); });
+      var changed = JSON.stringify(server) !== JSON.stringify(entry.msgs);
+      entry.msgs = server;
+      entry.loaded = true;
+      if(changed) updateChatDom(day);
+    }, function(){ entry.loading = false; entry.loaded = true; updateChatDom(day); });
+}
+function updateChatDom(day){
+  var list = document.getElementById("chatlist");
+  if(!list || list.getAttribute("data-day") !== day) return;
+  var entry = chatEntry(day);
+  var nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  list.innerHTML = chatMsgsHTML(entry.msgs);
+  var count = document.getElementById("chatcount");
+  if(count) count.textContent = entry.msgs.length ? String(entry.msgs.length) : "";
+  if(nearBottom) list.scrollTop = list.scrollHeight;
+}
+function chatMsgsHTML(msgs){
+  if(!msgs.length) return '<div class="hint" style="padding:6px 2px">Nothing yet — say the first word.</div>';
+  var meNow = getMe();
+  return msgs.map(function(m){
+    var who = memberById(m.member);
+    var name = who ? who.name : "someone";
+    var mine = meNow && meNow.id === m.member;
+    var t = m.at ? new Date(m.at).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}) : "";
+    return '<div class="msg' + (mine ? " mine" : "") + '" style="--avh:' + hueFor(name) + '">' + avHTML(name) +
+      '<div class="mb"><span class="mh"><span class="mn">' + esc(name) + '</span><span class="mt mono">' + t + '</span></span>' +
+      '<span class="mx">' + esc(m.text) + '</span></div></div>';
+  }).join("");
+}
+function sendChat(day){
+  var input = document.getElementById("chatinput");
+  var text = input ? input.value.trim() : "";
+  var meNow = getMe();
+  if(!text || !meNow) return;
+  if(text.length > 500) text = text.slice(0, 500);
+  var msg = {id:uid(), member:meNow.id, text:text, at:Date.now()};
+  chatEntry(day).msgs.push(msg);
+  chatDraft = "";
+  if(input) input.value = "";
+  updateChatDom(day);
+  if(sampleMode) return;
+  chQuery("INSERT INTO dajia.chat (room, day, id, member, text) FORMAT JSONEachRow", {},
+    JSON.stringify({room:roomId, day:day, id:msg.id, member:msg.member, text:msg.text}))
+    .then(function(){ loadChat(day); },
+      function(){ toast("Couldn't send — check your connection"); });
+}
+function renderChat(dateKey, me){
+  if(!chatOn()) return "";
+  var entry = chatEntry(dateKey);
+  if(!entry.loaded && !sampleMode) loadChat(dateKey);
+  if(sampleMode) loadChat(dateKey);
+  var h = '<div class="card chat" style="margin-top:16px"><div class="whead"><span class="sectionhead" style="margin:0">Table talk</span>' +
+    '<span class="wn mono" id="chatcount">' + (entry.msgs.length || "") + '</span></div>' +
+    '<div class="msgs" id="chatlist" data-day="' + dateKey + '">' + chatMsgsHTML(entry.msgs) + '</div>';
+  if(me){
+    h += '<div class="chatrow"><input type="text" id="chatinput" maxlength="500" placeholder="Say something about today’s question…" value="' + esc(chatDraft) + '">' +
+      '<button class="btn small" data-act="chatsend" data-day="' + dateKey + '">Send</button></div>';
+  } else {
+    h += '<p class="hint">Join the table to chime in.</p>';
+  }
+  h += '</div>';
+  return h;
 }
 
 /* ---------------- the wider table (world panel digests) ---------------- */
@@ -574,7 +691,10 @@ window.addEventListener("hashchange", function(){
   if(hashRoomId() !== roomId){ sampleMode = false; sampleMe = null; view = "today"; bootRoom(); }
 });
 document.addEventListener("visibilitychange", function(){
-  if(!document.hidden && roomId && !sampleMode) scheduleRefresh();
+  if(document.hidden || !roomId || sampleMode) return;
+  scheduleRefresh();
+  var list = document.getElementById("chatlist");
+  if(list) loadChat(list.getAttribute("data-day"));
 });
 
 /* ---------------- question bank ---------------- */
@@ -853,6 +973,8 @@ function render(){
   }
   html += '<div class="footer"><span class="orn">❧</span>Dajia Talks · one question a day, answered together</div>';
   app.innerHTML = html;
+  var cl = document.getElementById("chatlist");
+  if(cl) cl.scrollTop = cl.scrollHeight;
 }
 
 function renderHeader(me){
@@ -927,6 +1049,7 @@ function renderDay(dateKey, me, isToday){
       '<div class="big">The table opens when everyone in ' + esc(state.familyName) + ' has answered</div>' +
       '<div class="hint">or at ' + revealLabel() + ' — <span class="count mono" data-countdown>' + cd + '</span> from now, whichever comes first.</div></div>';
   }
+  h += renderChat(dateKey, me);
   return h;
 }
 
@@ -1281,6 +1404,12 @@ function loadSample(){
     answers:{m1:{choice:1,at:0},m2:{choice:3,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0},m6:{choice:2,at:0},m7:{choice:0,at:0}},
     reactions:{}
   };
+  sampleChat = {};
+  sampleChat[shift(-1)] = [
+    {id:"c1", member:"m3", text:"Okay, Lola's pandesal answer just made me cry on the bus", at:Date.now() - 86000000},
+    {id:"c2", member:"m6", text:"Come home and I will make you some, anak.", at:Date.now() - 85900000},
+    {id:"c3", member:"m5", text:"petition for Lola to open a bakery", at:Date.now() - 85800000}
+  ];
   return {v:2, setup:true, familyName:"The Moreno family", tz: now.tz, revealHour:18,
     createdAt: shift(-11), members:members, days:days};
 }
@@ -1289,6 +1418,14 @@ function loadSample(){
 document.addEventListener("input", function(ev){
   var t = ev.target;
   if(t && t.id === "freetext") draftText = t.value;
+  if(t && t.id === "chatinput") chatDraft = t.value;
+});
+document.addEventListener("keydown", function(ev){
+  if(ev.key === "Enter" && ev.target && ev.target.id === "chatinput"){
+    ev.preventDefault();
+    var btn = document.querySelector('[data-act="chatsend"]');
+    if(btn) sendChat(btn.getAttribute("data-day"));
+  }
 });
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-act]");
@@ -1365,12 +1502,12 @@ document.addEventListener("click", function(ev){
     save();
   }
   else if(act==="loadsample"){
-    sampleMode = true; sampleMe = null;
+    sampleMode = true; sampleMe = null; chatCache = {};
     state = loadSample();
     view = "today"; render();
   }
   else if(act==="exitsample"){
-    sampleMode = false; sampleMe = null;
+    sampleMode = false; sampleMe = null; chatCache = {};
     state = JSON.parse(REAL_STATE_JSON);
     view = "today";
     if(IS_ARTIFACT) render(); else bootRoom();
@@ -1409,6 +1546,7 @@ document.addEventListener("click", function(ev){
     rememberRoom(roomId, joiner.id, state.familyName);
     save();
   }
+  else if(act==="chatsend"){ sendChat(el.getAttribute("data-day")); }
   else if(act==="rm-retry"){ bootRoom(); }
   else if(act==="copylink"){
     var link = inviteLink();
@@ -1422,6 +1560,12 @@ document.addEventListener("click", function(ev){
     else manual();
   }
 });
+
+/* chat tick — refresh the open thread without touching the rest of the page */
+setInterval(function(){
+  var list = document.getElementById("chatlist");
+  if(list && !document.hidden && !sampleMode) loadChat(list.getAttribute("data-day"));
+}, 6000);
 
 /* countdown tick — light update; full re-render only when the lock opens */
 setInterval(function(){

@@ -19,6 +19,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 STORE = {}
 CH_STORE = {}
+CHAT_STORE = {}
 ROOM = re.compile(r"/rooms/([A-Za-z0-9]+)\.json")
 
 
@@ -62,7 +63,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         query = qs["query"][0].lstrip()
         n = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(n)
-        if query.upper().startswith("SELECT") and "dajia.world" in query:
+        if query.upper().startswith("SELECT") and "dajia.chat" in query:
+            key = (qs.get("param_r", [""])[0], qs.get("param_d", [""])[0])
+            rows = CHAT_STORE.get(key, [])
+            payload = "".join(json.dumps(r) + "\n" for r in rows).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        elif query.upper().startswith("INSERT") and "dajia.chat" in query:
+            row = json.loads(body)
+            import time
+            CHAT_STORE.setdefault((row["room"], row["day"]), []).append(
+                {"id": row["id"], "member": row["member"], "text": row["text"], "at": int(time.time() * 1000)})
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        elif query.upper().startswith("SELECT") and "dajia.world" in query:
             # canned world digest so the "Beyond your table" card is testable locally
             q = int(qs.get("param_q", ["0"])[0])
             if q % 2 == 0:

@@ -24,6 +24,21 @@ CREATE USER IF NOT EXISTS dajia_app IDENTIFIED BY '{APP_PASSWORD}'
 
 GRANT SELECT, INSERT ON dajia.rooms TO dajia_app;
 
+-- Per-day discussion threads ("Table talk"): append-only, one row per message.
+CREATE TABLE IF NOT EXISTS dajia.chat
+(
+    room   String,
+    day    String,
+    id     String,
+    member String,
+    text   String,
+    at     DateTime64(3) DEFAULT now64(3)
+)
+ENGINE = MergeTree
+ORDER BY (room, day, at);
+
+GRANT SELECT, INSERT ON dajia.chat TO dajia_app;
+
 -- Keep a runaway client (or a vandal who reads the page source) rate-limited.
 CREATE QUOTA IF NOT EXISTS dajia_app_quota
     KEYED BY ip_address
