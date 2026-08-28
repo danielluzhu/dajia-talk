@@ -35,35 +35,39 @@ via claude.ai.
 
 ## Family rooms
 
-On the open web the app stores each family room in a Firebase Realtime
-Database, spoken to over plain REST — no SDK, no build step. Every room has an
-unguessable id; the invite link (`…/#r=<id>`) is the only key, like a
-"anyone with the link" document. Members join by opening the link and typing
-their name — no accounts. Answers sync live (server-sent events, with polling
-as fallback), and saves merge onto the freshest copy so simultaneous answers
-never overwrite each other.
+On the open web the app stores each family room as a row in a ClickHouse Cloud
+table (`dajia.rooms`, a ReplacingMergeTree keyed by room id — every save is a
+new row, reads use `FINAL` for the latest). The page talks to the service's
+HTTPS interface directly with CORS-simple requests — no SDK, no build step.
+Every room has an unguessable id; the invite link (`…/#r=<id>`) is how family
+finds it. Members join by opening the link and typing their name — no
+accounts. Rooms sync by polling every 10 s (plus on tab focus), and saves
+merge onto the freshest copy so simultaneous answers never overwrite each
+other.
 
-One-time setup (~5 minutes, free):
+One-time setup, from this repo:
 
-1. Go to https://console.firebase.google.com and add a project (Analytics not
-   needed).
-2. In the project: **Build → Realtime Database → Create database**, any
-   location, **locked mode**.
-3. In the database's **Rules** tab, replace the rules with:
+```bash
+CH_URL="https://<service>.clickhouse.cloud:8443" \
+CH_ADMIN_USER="default" \
+CH_ADMIN_PASSWORD="..." \
+./setup-clickhouse.sh
+```
 
-   ```json
-   { "rules": { "rooms": { "$room": { ".read": true, ".write": true } } } }
-   ```
+The script creates the database/table plus a sandboxed `dajia_app` user with a
+random password, and prints the `BACKEND` line to paste into `index.html`.
+Admin credentials are used only by the script and never appear in the page.
 
-   This makes individual rooms readable/writable only by whoever knows the
-   room id (the invite link), and nothing else.
-4. Copy the database URL shown at the top of the data view (it looks like
-   `https://<project>-default-rtdb.firebaseio.com`).
-5. In `index.html`, set it on the `var DB_URL = ""` line, commit, push.
-
-Privacy: anyone who has a room's invite link can read and write that room —
-that is the sharing model. Treat invite links like you'd treat a private group
-chat link, and don't post them publicly.
+Security model, stated plainly: the `dajia_app` password ships inside the
+public page — that is unavoidable for a serverless static app. The user is
+correspondingly boxed in: it can only `SELECT` and `INSERT` on `dajia.rooms`
+(no ALTER/DROP/TRUNCATE, no other tables), result rows and execution time are
+capped, and a per-IP hourly quota limits abuse. Consequences to accept: anyone
+who reads the page source could list rooms in the table or append junk rows.
+Treat invite links like a private group-chat link, and don't use rooms for
+secrets. If that tradeoff isn't acceptable, the `rest` adapter still supports
+a Firebase Realtime Database (`BACKEND = {type:"rest", url:"https://<project>-
+default-rtdb.firebaseio.com"}`) whose rules can hide the room list.
 
 ## Local development
 

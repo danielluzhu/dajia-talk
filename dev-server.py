@@ -13,10 +13,12 @@ import json
 import os
 import re
 import socketserver
+import urllib.parse
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 STORE = {}
+CH_STORE = {}
 ROOM = re.compile(r"/rooms/([A-Za-z0-9]+)\.json")
 
 
@@ -48,6 +50,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0))
         STORE[rid] = json.loads(self.rfile.read(n) or b"null")
         self._send_json({})
+
+    def do_POST(self):
+        # Mock of the ClickHouse HTTP interface used by the "clickhouse" adapter.
+        parsed = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(parsed.query)
+        if parsed.path != "/" or "query" not in qs:
+            self.send_response(404)
+            self.end_headers()
+            return
+        query = qs["query"][0].lstrip()
+        n = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(n)
+        if query.upper().startswith("SELECT"):
+            rid = qs.get("param_id", [None])[0]
+            data = CH_STORE.get(rid)
+            out = (json.dumps({"data": data}) + "\n") if data is not None else ""
+            payload = out.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        elif query.upper().startswith("INSERT"):
+            row = json.loads(body)
+            CH_STORE[row["id"]] = row["data"]
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        else:
+            self.send_response(400)
+            self.end_headers()
 
     def log_message(self, *args):
         pass
