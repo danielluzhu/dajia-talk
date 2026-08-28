@@ -130,6 +130,9 @@
   }
   .sprig{text-align:center;color:var(--warm);margin:16px 0 10px;animation:rise .55s cubic-bezier(.2,.7,.2,1) .14s both}
   .qsub{text-align:center;color:var(--ink-soft);font-size:14px;margin:0 auto 30px;max-width:52ch;animation:rise .55s cubic-bezier(.2,.7,.2,1) .18s both}
+  .reroll{text-align:center;margin:-20px 0 26px;animation:rise .55s cubic-bezier(.2,.7,.2,1) .22s both}
+  .reroll .linkbtn{font-size:12.5px;color:var(--ink-soft);text-decoration-color:var(--line)}
+  .reroll .linkbtn:hover{color:var(--accent)}
 
   /* ---------- cards & composer ---------- */
   .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
@@ -723,7 +726,9 @@ function mergeRoom(remote, mine){
   Object.keys(mine.days || {}).forEach(function(k){
     var md = mine.days[k], rd = out.days[k];
     if(!rd){ out.days[k] = md; return; }
-    rd.q = rd.q || md.q;
+    /* a re-rolled question wins only while nobody anywhere has answered */
+    var rdAns = Object.keys(rd.answers || {}).length, mdAns = Object.keys(md.answers || {}).length;
+    rd.q = (md.q && !rdAns && !mdAns) ? md.q : (rd.q || md.q);
     Object.keys(md.answers || {}).forEach(function(mid){
       var ra = rd.answers[mid], ma = md.answers[mid];
       if(!ra || (ma.at || 0) >= (ra.at || 0)) rd.answers[mid] = ma;
@@ -1139,6 +1144,9 @@ function renderDay(dateKey, me, isToday){
   h += '<h1 class="q">' + esc(q.q) + '</h1>' + sprig();
   if(!isToday) h += '<p class="qsub">' + prettyDate(dateKey, {weekday:"long", year:"numeric", month:"long", day:"numeric"}) + '</p>';
   else h += '<p class="qsub">Everyone gets this question today. Answers open when the whole family is in — or at ' + revealLabel() + '.</p>';
+  if(isToday && !readOnly && !Object.keys(d.answers).length){
+    h += '<div class="reroll"><button class="linkbtn" data-act="reroll">↻ Try a different question</button></div>';
+  }
 
   /* composer / my answer (once the table is open, your answer lives in the list) */
   if(isToday && !readOnly){
@@ -1567,6 +1575,20 @@ document.addEventListener("click", function(ev){
     render();
   }
   else if(act==="pickopt"){ draftChoice = +el.getAttribute("data-i"); render(); }
+  else if(act==="reroll"){
+    var rk = famParts().dateKey;
+    var rd = ensureDay(rk);
+    if(Object.keys(rd.answers).length){ toast("Someone already answered — today's question is set"); render(); return; }
+    var used = {};
+    Object.keys(state.days).forEach(function(k){ var dq = state.days[k].q; if(dq && dq.qi != null) used[dq.qi] = true; });
+    var curQi = worldQi(rd.q);
+    if(curQi >= 0) used[curQi] = true;
+    var fresh = QBANK.filter(function(qq){ return !used[qq.qi]; });
+    if(!fresh.length) fresh = QBANK.filter(function(qq){ return qq.qi !== curQi; });
+    rd.q = fresh[Math.floor(Math.random() * fresh.length)];
+    draftText = ""; draftChoice = null; worldCache = {};
+    save();
+  }
   else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; render(); }
   else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; render(); }
   else if(act==="submit"){
