@@ -338,7 +338,7 @@
   .footer .orn{color:var(--warm);margin-right:6px}
 
   /* ---------- the wider table ---------- */
-  .world{border:1.5px solid var(--accent);border-radius:16px;background:var(--surface);padding:19px 22px;margin-top:16px;box-shadow:var(--shadow);animation:rise .5s cubic-bezier(.2,.7,.2,1) .1s both}
+  .world{border:1.5px solid var(--accent);border-radius:16px;background:var(--surface);padding:19px 22px;margin:16px 0 14px;box-shadow:var(--shadow);animation:rise .5s cubic-bezier(.2,.7,.2,1) .1s both}
   .world .whead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
   .world .wn{font-size:10.5px;color:var(--ink-faint);letter-spacing:.14em;text-transform:uppercase}
   .world .wline{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:500;line-height:1.35;margin-bottom:12px;text-wrap:balance}
@@ -1140,16 +1140,16 @@ function renderDay(dateKey, me, isToday){
   if(!isToday) h += '<p class="qsub">' + prettyDate(dateKey, {weekday:"long", year:"numeric", month:"long", day:"numeric"}) + '</p>';
   else h += '<p class="qsub">Everyone gets this question today. Answers open when the whole family is in — or at ' + revealLabel() + '.</p>';
 
-  /* composer / my answer */
+  /* composer / my answer (once the table is open, your answer lives in the list) */
   if(isToday && !readOnly){
     if(!myAns || editingAnswer){
       h += renderComposer(q, myAns);
-    } else {
+    } else if(!unlocked){
       h += '<div class="card"><div class="sectionhead">Your answer</div><div class="yourline">' +
         (q.t==="poll" ? '<div class="txt"><b>' + esc(q.o[myAns.choice]) + '</b></div>'
                       : '<div class="txt">' + esc(myAns.text) + '</div>') +
         '</div>' +
-        (!unlocked ? '<div class="btnrow"><button class="btn ghost small" data-act="editans">Change answer</button></div>' : "") +
+        '<div class="btnrow"><button class="btn ghost small" data-act="editans">Change answer</button></div>' +
         '</div>';
     }
   }
@@ -1210,14 +1210,16 @@ function renderReveal(dateKey, q, me, isToday){
     var a = d.answers[m.id];
     if(a) entries.push({id:m.id, name:m.name, ans:a});
   });
+  /* your own answer leads the list */
+  if(me) entries.sort(function(a, b){ return (b.id === me.id ? 1 : 0) - (a.id === me.id ? 1 : 0); });
   if(!entries.length){
     return '<div class="card lock"><div class="big">No answers made it in ' + (isToday?'yet':'this day') + '.</div>' +
       (isToday ? '<div class="hint">The table is open — add yours above and it appears here.</div>' : '') + '</div>';
   }
   var h = '<div style="margin-top:26px"><div class="sectionhead" style="text-align:center">The table is open · ' + entries.length + ' answer' + (entries.length===1?"":"s") + '</div>';
+  h += renderWorld(q, entries);
   if(q.t==="poll") h += renderPollReveal(q, entries);
   else h += renderLetters(dateKey, q, entries, me);
-  h += renderWorld(q, entries);
   h += '</div>';
   return h;
 }
