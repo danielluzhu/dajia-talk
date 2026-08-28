@@ -383,6 +383,16 @@
     transition:border-color .15s, box-shadow .15s;
   }
   .chatrow input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .mreacts{display:flex;gap:4px;margin-top:5px}
+  .mre{
+    border:1px solid transparent;background:none;border-radius:999px;padding:0 7px;
+    font-size:11.5px;line-height:20px;color:var(--ink-soft);opacity:.5;
+    transition:opacity .15s, border-color .15s, background .15s;
+  }
+  .mre:hover{opacity:1;border-color:var(--warm)}
+  .mre.has{opacity:1;border-color:var(--line)}
+  .mre.mine{opacity:1;background:var(--warm-soft);border-color:transparent;color:var(--ink)}
+  .mre .mono{font-size:10px}
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -463,12 +473,12 @@ function apiSave(id, data){
 /* ---------------- table talk (per-day chat) ---------------- */
 var chatCache = {};      /* key -> {msgs:[{id,member,text,at}], loading} */
 var chatDraft = "";
-var sampleChat = null;
+var sampleChat = null, sampleChatReacts = null;
 function chatOn(){ return sampleMode || (BACKEND.type === "clickhouse" && !!BACKEND.url && !!roomId); }
 function chatKey(day){ return (sampleMode ? "sample" : roomId) + "|" + day; }
 function chatEntry(day){
   var k = chatKey(day);
-  if(!chatCache[k]) chatCache[k] = {msgs:[], loading:false, loaded:false};
+  if(!chatCache[k]) chatCache[k] = {msgs:[], reacts:{}, loading:false, loaded:false};
   return chatCache[k];
 }
 function loadChat(day){
@@ -478,16 +488,19 @@ function loadChat(day){
     if(!se.loaded){
       se.loaded = true;
       if(sampleChat && sampleChat[day]) se.msgs = sampleChat[day].slice();
+      if(sampleChatReacts && sampleChatReacts[day]) se.reacts = sampleChatReacts[day];
     }
     return;
   }
   var entry = chatEntry(day);
   if(entry.loading) return;
   entry.loading = true;
-  chQuery("SELECT id, member, text, toUnixTimestamp64Milli(at) AS at FROM dajia.chat WHERE room = {r:String} AND day = {d:String} ORDER BY at LIMIT 500 FORMAT JSONEachRow", {r:roomId, d:day})
-    .then(function(text){
+  Promise.all([
+    chQuery("SELECT id, member, text, toUnixTimestamp64Milli(at) AS at FROM dajia.chat WHERE room = {r:String} AND day = {d:String} ORDER BY at LIMIT 500 FORMAT JSONEachRow", {r:roomId, d:day}),
+    chQuery("SELECT msg, emoji, member FROM (SELECT msg, emoji, member, argMax(op, at) AS o FROM dajia.chat_reacts WHERE room = {r:String} AND day = {d:String} GROUP BY msg, emoji, member) WHERE o = 1 FORMAT JSONEachRow", {r:roomId, d:day})
+  ]).then(function(results){
       entry.loading = false;
-      var server = text.trim() ? text.trim().split("\n").map(function(l){
+      var server = results[0].trim() ? results[0].trim().split("\n").map(function(l){
         var row = JSON.parse(l);
         return {id:row.id, member:row.member, text:row.text, at:Number(row.at)};
       }) : [];
@@ -495,33 +508,68 @@ function loadChat(day){
       server.forEach(function(m){ seen[m.id] = true; });
       /* keep optimistic messages the server hasn't confirmed yet */
       entry.msgs.forEach(function(m){ if(!seen[m.id]) server.push(m); });
-      var changed = JSON.stringify(server) !== JSON.stringify(entry.msgs);
+      var reacts = {};
+      if(results[1].trim()) results[1].trim().split("\n").forEach(function(l){
+        var row = JSON.parse(l);
+        var slot = reacts[row.msg] = reacts[row.msg] || {};
+        (slot[row.emoji] = slot[row.emoji] || []).push(row.member);
+      });
+      var changed = JSON.stringify([server, reacts]) !== JSON.stringify([entry.msgs, entry.reacts]);
       entry.msgs = server;
+      entry.reacts = reacts;
       entry.loaded = true;
       if(changed) updateChatDom(day);
     }, function(){ entry.loading = false; entry.loaded = true; updateChatDom(day); });
+}
+function toggleChatReact(day, msgId, emoji){
+  var meNow = getMe();
+  if(!meNow) return;
+  var entry = chatEntry(day);
+  var slot = entry.reacts[msgId] = entry.reacts[msgId] || {};
+  var arr = slot[emoji] = slot[emoji] || [];
+  var ix = arr.indexOf(meNow.id);
+  var op = ix >= 0 ? -1 : 1;
+  if(ix >= 0) arr.splice(ix, 1); else arr.push(meNow.id);
+  if(!arr.length) delete slot[emoji];
+  updateChatDom(day);
+  if(sampleMode) return;
+  chQuery("INSERT INTO dajia.chat_reacts (room, day, msg, member, emoji, op) FORMAT JSONEachRow", {},
+    JSON.stringify({room:roomId, day:day, msg:msgId, member:meNow.id, emoji:emoji, op:op}))
+    .then(function(){}, function(){ toast("Couldn't react — check your connection"); });
 }
 function updateChatDom(day){
   var list = document.getElementById("chatlist");
   if(!list || list.getAttribute("data-day") !== day) return;
   var entry = chatEntry(day);
   var nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-  list.innerHTML = chatMsgsHTML(entry.msgs);
+  list.innerHTML = chatMsgsHTML(day);
   var count = document.getElementById("chatcount");
   if(count) count.textContent = entry.msgs.length ? String(entry.msgs.length) : "";
   if(nearBottom) list.scrollTop = list.scrollHeight;
 }
-function chatMsgsHTML(msgs){
-  if(!msgs.length) return '<div class="hint" style="padding:6px 2px">Nothing yet — say the first word.</div>';
+function chatMsgsHTML(day){
+  var entry = chatEntry(day);
+  if(!entry.msgs.length) return '<div class="hint" style="padding:6px 2px">Nothing yet — say the first word.</div>';
   var meNow = getMe();
-  return msgs.map(function(m){
+  return entry.msgs.map(function(m){
     var who = memberById(m.member);
     var name = who ? who.name : "someone";
     var mine = meNow && meNow.id === m.member;
     var t = m.at ? new Date(m.at).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}) : "";
+    var r = entry.reacts[m.id] || {};
+    var reactBtns = EMOJI.map(function(em){
+      var arr = r[em] || [];
+      var iReacted = meNow && arr.indexOf(meNow.id) >= 0;
+      var names = arr.map(function(id){ var mm = memberById(id); return mm ? mm.name : ""; }).filter(Boolean).join(", ");
+      return '<button class="mre' + (arr.length ? " has" : "") + (iReacted ? " mine" : "") + '" data-act="chatreact" ' +
+        'data-day="' + day + '" data-msg="' + m.id + '" data-e="' + esc(em) + '" title="' + esc(names) + '">' +
+        em + (arr.length ? ' <span class="mono">' + arr.length + '</span>' : "") + '</button>';
+    }).join("");
     return '<div class="msg' + (mine ? " mine" : "") + '" style="--avh:' + hueFor(name) + '">' + avHTML(name) +
       '<div class="mb"><span class="mh"><span class="mn">' + esc(name) + '</span><span class="mt mono">' + t + '</span></span>' +
-      '<span class="mx">' + esc(m.text) + '</span></div></div>';
+      '<span class="mx">' + esc(m.text) + '</span>' +
+      (meNow || Object.keys(r).length ? '<span class="mreacts">' + reactBtns + '</span>' : '') +
+      '</div></div>';
   }).join("");
 }
 function sendChat(day){
@@ -548,7 +596,7 @@ function renderChat(dateKey, me){
   if(sampleMode) loadChat(dateKey);
   var h = '<div class="card chat" style="margin-top:16px"><div class="whead"><span class="sectionhead" style="margin:0">Table talk</span>' +
     '<span class="wn mono" id="chatcount">' + (entry.msgs.length || "") + '</span></div>' +
-    '<div class="msgs" id="chatlist" data-day="' + dateKey + '">' + chatMsgsHTML(entry.msgs) + '</div>';
+    '<div class="msgs" id="chatlist" data-day="' + dateKey + '">' + chatMsgsHTML(dateKey) + '</div>';
   if(me){
     h += '<div class="chatrow"><input type="text" id="chatinput" maxlength="500" placeholder="Say something about today’s question…" value="' + esc(chatDraft) + '">' +
       '<button class="btn small" data-act="chatsend" data-day="' + dateKey + '">Send</button></div>';
@@ -1410,6 +1458,8 @@ function loadSample(){
     {id:"c2", member:"m6", text:"Come home and I will make you some, anak.", at:Date.now() - 85900000},
     {id:"c3", member:"m5", text:"petition for Lola to open a bakery", at:Date.now() - 85800000}
   ];
+  sampleChatReacts = {};
+  sampleChatReacts[shift(-1)] = {c2:{"🥹":["m3","m5","m4"]}, c3:{"😂":["m1","m7"],"❤️":["m6"]}};
   return {v:2, setup:true, familyName:"The Moreno family", tz: now.tz, revealHour:18,
     createdAt: shift(-11), members:members, days:days};
 }
@@ -1547,6 +1597,7 @@ document.addEventListener("click", function(ev){
     save();
   }
   else if(act==="chatsend"){ sendChat(el.getAttribute("data-day")); }
+  else if(act==="chatreact"){ toggleChatReact(el.getAttribute("data-day"), el.getAttribute("data-msg"), el.getAttribute("data-e")); }
   else if(act==="rm-retry"){ bootRoom(); }
   else if(act==="copylink"){
     var link = inviteLink();

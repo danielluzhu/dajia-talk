@@ -39,6 +39,23 @@ ORDER BY (room, day, at);
 
 GRANT SELECT, INSERT ON dajia.chat TO dajia_app;
 
+-- Reactions to chat messages: append-only toggle events; current state is the
+-- latest op per (msg, member, emoji) — 1 added, -1 removed.
+CREATE TABLE IF NOT EXISTS dajia.chat_reacts
+(
+    room   String,
+    day    String,
+    msg    String,
+    member String,
+    emoji  String,
+    op     Int8,
+    at     DateTime64(3) DEFAULT now64(3)
+)
+ENGINE = MergeTree
+ORDER BY (room, day, msg);
+
+GRANT SELECT, INSERT ON dajia.chat_reacts TO dajia_app;
+
 -- Keep a runaway client (or a vandal who reads the page source) rate-limited.
 CREATE QUOTA IF NOT EXISTS dajia_app_quota
     KEYED BY ip_address
