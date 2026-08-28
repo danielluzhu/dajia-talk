@@ -402,6 +402,9 @@
   }
   .mq b{color:var(--ink)}
   .msg.flash .mb{background:var(--warm-soft);transition:background .3s}
+  .letter.flash{background:var(--warm-soft);transition:background .3s}
+  .reacts .ansrep{font-size:11px;letter-spacing:.02em;color:var(--ink-faint);border-color:transparent}
+  .reacts .ansrep:hover{color:var(--ink);border-color:var(--warm)}
   #replybar .rb{
     display:flex;align-items:center;gap:8px;justify-content:space-between;
     background:var(--ground);border:1px solid var(--line-soft);border-radius:10px;
@@ -579,11 +582,9 @@ function chatMsgsHTML(day){
     var r = entry.reacts[m.id] || {};
     var quote = "";
     if(m.reply){
-      var parent = byId[m.reply];
-      var pWho = parent ? memberById(parent.member) : null;
+      var p = chatParentInfo(day, m.reply, byId);
       quote = '<span class="mq" data-act="chatjump" data-msg="' + esc(m.reply) + '">' +
-        '<b>' + esc(pWho ? pWho.name : "earlier") + '</b> ' +
-        esc(parent ? (parent.text.length > 70 ? parent.text.slice(0, 70) + "…" : parent.text) : "an earlier message") + '</span>';
+        '<b>' + esc(p.label) + '</b> ' + esc(p.text) + '</span>';
     }
     var reactBtns = EMOJI.map(function(em){
       var arr = r[em] || [];
@@ -602,16 +603,40 @@ function chatMsgsHTML(day){
       '</div></div>';
   }).join("");
 }
+/* resolve what a reply ref points at: "a:<memberId>" is that member's answer
+   for the day; anything else is a chat message id */
+function chatParentInfo(day, ref, msgsById){
+  var text, label, target;
+  if(ref.indexOf("a:") === 0){
+    var mid = ref.slice(2);
+    var d = state.days[day];
+    var ans = d && d.answers ? d.answers[mid] : null;
+    var who = memberById(mid);
+    var qq = (d && d.q) ? d.q : questionForDate(day);
+    text = ans ? (ans.text != null ? ans.text : (qq.o && qq.o[ans.choice] != null ? qq.o[ans.choice] : "")) : "";
+    label = (who ? who.name : "someone") + "’s answer";
+    target = "ans-" + mid;
+  } else {
+    var parent = msgsById ? msgsById[ref] : null;
+    if(!parent){
+      var entry = chatEntry(day);
+      entry.msgs.forEach(function(m){ if(m.id === ref) parent = m; });
+    }
+    var pWho = parent ? memberById(parent.member) : null;
+    text = parent ? parent.text : "an earlier message";
+    label = pWho ? pWho.name : "earlier";
+    target = "msg-" + ref;
+  }
+  if(text.length > 70) text = text.slice(0, 70) + "…";
+  return {label:label, text:text, target:target};
+}
 function updateReplyBar(day){
   var bar = document.getElementById("replybar");
   if(!bar) return;
   if(!chatReplyTo){ bar.innerHTML = ""; return; }
-  var entry = chatEntry(day);
-  var parent = null;
-  entry.msgs.forEach(function(m){ if(m.id === chatReplyTo) parent = m; });
-  var pWho = parent ? memberById(parent.member) : null;
-  bar.innerHTML = '<span class="rb"><span class="rbtxt">Replying to <b>' + esc(pWho ? pWho.name : "…") + '</b> — ' +
-    esc(parent ? (parent.text.length > 50 ? parent.text.slice(0, 50) + "…" : parent.text) : "") + '</span>' +
+  var p = chatParentInfo(day, chatReplyTo, null);
+  bar.innerHTML = '<span class="rb"><span class="rbtxt">Replying to <b>' + esc(p.label) + '</b> — ' +
+    esc(p.text) + '</span>' +
     '<button class="rbx" data-act="chatreplycancel" aria-label="Cancel reply">×</button></span>';
 }
 function sendChat(day){
@@ -1298,7 +1323,7 @@ function renderLetters(dateKey, q, entries, me){
   h += '<div class="lettergroup">';
   entries.forEach(function(e){
     var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
-    h += '<div class="letter"><div class="from"><span class="who" style="--avh:' + hueFor(e.name) + '">' + avHTML(e.name) + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
+    h += '<div class="letter" id="ans-' + e.id + '"><div class="from"><span class="who" style="--avh:' + hueFor(e.name) + '">' + avHTML(e.name) + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
       '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
   });
   h += '</div>';
@@ -1309,13 +1334,16 @@ var EMOJI = ["❤️","😂","🥹"];
 function renderReacts(dateKey, targetId, me){
   var d = day(dateKey);
   var r = (d.reactions && d.reactions[targetId]) || {};
-  return '<div class="reacts">' + EMOJI.map(function(em){
+  var h = '<div class="reacts">' + EMOJI.map(function(em){
     var who = r[em] || [];
     var mine = !!me && who.indexOf(me.id)>=0;
     return '<button class="' + (mine?"mine":"") + '" data-act="react" data-day="' + dateKey + '" data-t="' + targetId + '" data-e="' + esc(em) + '" ' +
       'title="' + esc(who.map(function(id){ var m=memberById(id); return m?m.name:""; }).filter(Boolean).join(", ")) + '">' +
       em + (who.length? ' <span class="mono">' + who.length + '</span>' : "") + '</button>';
-  }).join("") + '</div>';
+  }).join("");
+  if(me && chatOn()) h += '<button class="ansrep" data-act="ansreply" data-day="' + dateKey + '" data-m="' + targetId + '">↩ reply</button>';
+  h += '</div>';
+  return h;
 }
 
 function renderArchive(){
@@ -1499,7 +1527,7 @@ function loadSample(){
   };
   sampleChat = {};
   sampleChat[shift(-1)] = [
-    {id:"c1", member:"m3", text:"Okay, Lola's pandesal answer just made me cry on the bus", at:Date.now() - 86000000},
+    {id:"c1", member:"m3", text:"Okay, Lola's pandesal answer just made me cry on the bus", reply:"a:m6", at:Date.now() - 86000000},
     {id:"c2", member:"m6", text:"Come home and I will make you some, anak.", at:Date.now() - 85900000},
     {id:"c3", member:"m5", text:"petition for Lola to open a bakery", reply:"c2", at:Date.now() - 85800000}
   ];
@@ -1654,8 +1682,15 @@ document.addEventListener("click", function(ev){
     var bar = document.getElementById("replybar");
     if(bar) bar.innerHTML = "";
   }
+  else if(act==="ansreply"){
+    chatReplyTo = "a:" + el.getAttribute("data-m");
+    updateReplyBar(el.getAttribute("data-day"));
+    var ciAns = document.getElementById("chatinput");
+    if(ciAns){ ciAns.scrollIntoView({block:"center", behavior:"smooth"}); ciAns.focus(); }
+  }
   else if(act==="chatjump"){
-    var target = document.getElementById("msg-" + el.getAttribute("data-msg"));
+    var jref = el.getAttribute("data-msg");
+    var target = document.getElementById(jref.indexOf("a:") === 0 ? "ans-" + jref.slice(2) : "msg-" + jref);
     if(target){
       target.scrollIntoView({block:"center", behavior:"smooth"});
       target.classList.add("flash");
