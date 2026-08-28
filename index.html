@@ -903,11 +903,23 @@ var QBANK = [
 ];
 QBANK.forEach(function(q, i){ q.qi = i; }); /* snapshots carry qi so world digests match old days */
 
+/* day keys can carry a round suffix: "2026-08-28", "2026-08-28#2", ... —
+   a table can run several questions in one day once a round completes */
+function baseOf(key){ return key.split("#")[0]; }
+function roundOf(key){ var p = key.split("#"); return p[1] ? +p[1] : 1; }
+function currentRoundKey(){
+  var base = famParts().dateKey, best = base, bestN = 1;
+  Object.keys(state.days).forEach(function(k){
+    if(baseOf(k) === base && roundOf(k) >= bestN){ bestN = roundOf(k); best = k; }
+  });
+  return best;
+}
+
 /* deterministic pick: same question for everyone on a given family-date */
 function questionForDate(dateKey){
   var d = state.days[dateKey];
   if(d && d.q) return d.q; /* snapshotted on first answer, stable forever */
-  var parts = dateKey.split("-");
+  var parts = baseOf(dateKey).split("-");
   var ord = Math.round(Date.UTC(+parts[0], +parts[1]-1, +parts[2]) / 86400000);
   return QBANK[((ord*37) % QBANK.length + QBANK.length) % QBANK.length];
 }
@@ -922,13 +934,13 @@ function famParts(tzArg){
   return {dateKey:p.year+"-"+p.month+"-"+p.day, hour:hour, minute:+p.minute, tz:tz};
 }
 function prettyDate(dateKey, opts){
-  var parts = dateKey.split("-");
+  var parts = baseOf(dateKey).split("-");
   var d = new Date(Date.UTC(+parts[0], +parts[1]-1, +parts[2], 12));
   return d.toLocaleDateString(undefined, opts || {weekday:"long", month:"long", day:"numeric"});
 }
 function dayNumber(dateKey){
   if(!state.createdAt) return 1;
-  function ord(k){ var p=k.split("-"); return Math.round(Date.UTC(+p[0],+p[1]-1,+p[2])/86400000); }
+  function ord(k){ var p=baseOf(k).split("-"); return Math.round(Date.UTC(+p[0],+p[1]-1,+p[2])/86400000); }
   return Math.max(1, ord(dateKey) - ord(state.createdAt) + 1);
 }
 
@@ -947,7 +959,8 @@ function familyAnswered(dateKey){
 }
 function isUnlocked(dateKey){
   var now = famParts();
-  if(dateKey < now.dateKey) return true;                 /* past days are always open */
+  if(baseOf(dateKey) < now.dateKey) return true;         /* past days are always open */
+  if(dateKey !== currentRoundKey()) return true;         /* finished rounds of today too */
   if(now.hour >= (state.revealHour||18)) return true;    /* 6:00 PM at the family table */
   return familyAnswered(dateKey);                        /* the whole family is in */
 }
@@ -1103,7 +1116,7 @@ function render(){
   if(!me && view === "today"){
     html += (IS_ARTIFACT || sampleMode) ? renderWhoAmI() : renderJoin();
   } else if(view === "today"){
-    html += renderDay(famParts().dateKey, me, true);
+    html += renderDay(currentRoundKey(), me, true);
   } else if(view === "archive"){
     html += renderArchive();
   } else if(view === "family"){
@@ -1156,7 +1169,7 @@ function renderDay(dateKey, me, isToday){
       " at the family table (" + esc((state.tz||clock.tz).split("/").pop().replace(/_/g," ")) + ")</div>";
   }
 
-  h += '<div class="eyebrow"><span class="mono">Day ' + dayNumber(dateKey) + '</span><span class="sep">·</span>' +
+  h += '<div class="eyebrow"><span class="mono">Day ' + dayNumber(dateKey) + (roundOf(dateKey) > 1 ? ' · №' + roundOf(dateKey) : '') + '</span><span class="sep">·</span>' +
        '<span class="tag">' + esc(q.tag) + '</span><span class="sep">·</span>' +
        '<span>' + (q.t==="poll" ? "Poll" : "Open answer") + '</span></div>';
   h += '<h1 class="q">' + esc(q.q) + '</h1>' + sprig();
@@ -1186,6 +1199,11 @@ function renderDay(dateKey, me, isToday){
   /* reveal or lock */
   if(unlocked){
     h += renderReveal(dateKey, q, me, isToday);
+    if(isToday && !readOnly && me && familyAnswered(dateKey)){
+      h += '<div class="btnrow" style="justify-content:center;margin:22px 0 4px">' +
+        '<button class="btn" data-act="newround">Ask another question</button></div>' +
+        '<p class="hint" style="text-align:center;margin-top:6px">This round moves to Past days, and the table gets a fresh question.</p>';
+    }
   } else {
     var mins = minutesToReveal();
     var cd = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
@@ -1376,14 +1394,21 @@ function renderReacts(dateKey, targetId, me){
 
 function renderArchive(){
   var today = famParts().dateKey;
-  var keys = Object.keys(state.days).filter(function(k){ return k < today; }).sort().reverse();
+  var cur = currentRoundKey();
+  var keys = Object.keys(state.days).filter(function(k){
+    return baseOf(k) < today || (baseOf(k) === today && k !== cur);
+  }).sort(function(a, b){
+    if(baseOf(a) !== baseOf(b)) return baseOf(a) < baseOf(b) ? 1 : -1;
+    return roundOf(b) - roundOf(a);
+  });
   var h = '<div style="margin-top:26px"><div class="sectionhead">Past days at the table</div>';
   if(!keys.length) h += '<p class="hint">Nothing here yet — after your first evening together, every day’s question and answers live on here.</p>';
   keys.forEach(function(k){
     var q = questionForDate(k);
     var n = Object.keys(day(k).answers).length;
+    var rnd = roundOf(k);
     h += '<button class="dayrow" data-act="goto" data-v="day:' + k + '">' +
-      '<span class="d mono">' + prettyDate(k,{month:"short",day:"numeric"}) + '<br>Day ' + dayNumber(k) + '</span>' +
+      '<span class="d mono">' + prettyDate(k,{month:"short",day:"numeric"}) + '<br>Day ' + dayNumber(k) + (rnd > 1 ? ' · №' + rnd : '') + '</span>' +
       '<span class="qq">' + esc(q.q) + '</span>' +
       '<span class="n mono">' + n + ' ans</span></button>';
   });
@@ -1594,7 +1619,7 @@ document.addEventListener("click", function(ev){
   }
   else if(act==="pickopt"){ draftChoice = +el.getAttribute("data-i"); render(); }
   else if(act==="reroll"){
-    var rk = famParts().dateKey;
+    var rk = currentRoundKey();
     var rd = ensureDay(rk);
     if(Object.keys(rd.answers).length){ toast("Someone already answered — today's question is set"); render(); return; }
     var used = {};
@@ -1611,7 +1636,7 @@ document.addEventListener("click", function(ev){
   else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; render(); }
   else if(act==="submit"){
     var me = getMe(); if(!me) return;
-    var dateKey = famParts().dateKey;
+    var dateKey = currentRoundKey();
     var d = ensureDay(dateKey);
     var q = d.q;
     if(q.t==="poll"){
@@ -1712,6 +1737,18 @@ document.addEventListener("click", function(ev){
     rememberRoom(roomId, joiner.id, state.familyName);
     save();
   }
+  else if(act==="newround"){
+    var curKey = currentRoundKey();
+    if(!state.days[curKey] || !familyAnswered(curKey)){ toast("A new question opens once everyone has answered"); render(); return; }
+    var usedQ = {};
+    Object.keys(state.days).forEach(function(k){ var dq = state.days[k].q; if(dq && dq.qi != null) usedQ[dq.qi] = true; });
+    var freshQ = QBANK.filter(function(qq){ return !usedQ[qq.qi]; });
+    if(!freshQ.length){ toast("You've been through all 60 questions — impressive"); return; }
+    var nextKey = baseOf(curKey) + "#" + (roundOf(curKey) + 1);
+    state.days[nextKey] = {q: freshQ[Math.floor(Math.random() * freshQ.length)], answers:{}, reactions:{}};
+    draftText = ""; draftChoice = null; editingAnswer = false;
+    save();
+  }
   else if(act==="chatsend"){ sendChat(el.getAttribute("data-day")); }
   else if(act==="chatreact"){ toggleChatReact(el.getAttribute("data-day"), el.getAttribute("data-msg"), el.getAttribute("data-e")); }
   else if(act==="chatreplyto"){
@@ -1767,7 +1804,7 @@ setInterval(function(){
   var typing = active && (active.tagName==="TEXTAREA" || active.tagName==="INPUT");
   var cdEl = document.querySelector("[data-countdown]");
   if(cdEl){
-    if(isUnlocked(famParts().dateKey)){ if(!typing) render(); return; }
+    if(isUnlocked(currentRoundKey())){ if(!typing) render(); return; }
     var mins = minutesToReveal();
     cdEl.textContent = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
   }
