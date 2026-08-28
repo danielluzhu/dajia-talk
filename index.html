@@ -368,7 +368,7 @@ var IS_ARTIFACT = !!(window.claude && window.claude.use);
      user that can only SELECT/INSERT that one table.
    - "rest": a Firebase-RTDB-style JSON endpoint; dev-server.py mocks it on
      localhost, which is auto-detected. */
-var BACKEND = {type:"clickhouse", url:"", user:"dajia_app", pass:""};
+var BACKEND = {type:"clickhouse", url:"https://mezvpvr0xa.us-east-2.aws.clickhouse.cloud:8443", user:"dajia_app", pass:"DT!040d495db9ef05c33b75cd5ax"};
 /* local development: dev-server.py mocks both adapters on this origin
    (?chdev exercises the clickhouse adapter instead of the rest one) */
 if(/^localhost(:\d+)?$/.test(location.host)){

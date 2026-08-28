@@ -17,7 +17,9 @@ set -euo pipefail
 : "${CH_ADMIN_USER:=default}"
 : "${CH_ADMIN_PASSWORD:?set CH_ADMIN_PASSWORD (the service admin password)}"
 
-APP_PASSWORD="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 28)"
+# hex core plus fixed caps/special to satisfy Cloud password policy; only
+# sed- and URL-safe characters
+APP_PASSWORD="DT!$(openssl rand -hex 12)x"
 
 run_sql() {
   curl -sS --fail-with-body "$CH_URL/" \
