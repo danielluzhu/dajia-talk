@@ -83,6 +83,29 @@ The "explore a sample family" button on the landing screen shows every state —
 sealed answers, the countdown, poll reveals, free-form reveals — with demo
 data, no database needed.
 
+## The world panel ("Beyond your table")
+
+When a family's answers unlock, the reveal ends with a comparison card: how a
+panel of 100 answered the same question. The panel is synthetic — generated
+dinner guests, clearly labeled as such in the UI — built once and stored in
+ClickHouse:
+
+- `world/authored-*.json` — a hand-authored corpus (~16 distinct answers per
+  free-form question, each tagged with a sentiment and themes).
+- `world/polls.json` — vote distributions for the 30 poll questions.
+- `world/build-world.js` — deterministically expands the corpus to 100 named
+  panelists per question and computes each question's digest: sentiment mix
+  (warm / funny / wistful / thoughtful), top themes, common words,
+  representative quotes, and a one-line summary. Outputs
+  `world_answers.jsonl` (6,000 rows) and `world.jsonl` (60 digests).
+- `world/load-world.sh` — loads both into `dajia.world_answers` and
+  `dajia.world` (admin credentials; grants SELECT to the app user).
+
+At reveal time the app fetches only the day's digest and renders: for polls, a
+"your table vs the world" dual-bar comparison; for free-form, sentiment bars,
+theme counts, a couple of panel quotes, and — when the family's own words
+overlap the panel's — a "your table said this too" callout.
+
 ## Structure of `index.html`
 
 - `<style>` — token-based theming (light + dark via `prefers-color-scheme`

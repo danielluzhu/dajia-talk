@@ -336,6 +336,35 @@
   .yourline .txt{font-size:15px;white-space:pre-wrap}
   .footer{margin-top:52px;text-align:center;font-size:12px;color:var(--ink-faint)}
   .footer .orn{color:var(--warm);margin-right:6px}
+
+  /* ---------- the wider table ---------- */
+  .world{border:1.5px solid var(--accent);border-radius:16px;background:var(--surface);padding:19px 22px;margin-top:16px;box-shadow:var(--shadow);animation:rise .5s cubic-bezier(.2,.7,.2,1) .1s both}
+  .world .whead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+  .world .wn{font-size:10.5px;color:var(--ink-faint);letter-spacing:.14em;text-transform:uppercase}
+  .world .wline{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:500;line-height:1.35;margin-bottom:12px;text-wrap:balance}
+  .wlegend{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);margin-bottom:10px}
+  .sw{width:16px;height:8px;border-radius:2px;display:inline-block}
+  .sw.fam{background:var(--accent)}
+  .sw.wor{background:repeating-linear-gradient(45deg,var(--warm) 0 3px,var(--warm-soft) 3px 6px)}
+  .wopt{margin:11px 0}
+  .wolbl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px;font-weight:700;margin-bottom:2px}
+  .wonum{font-size:11.5px;color:var(--ink-soft);font-weight:400}
+  .strack{display:block;height:9px;border-radius:0 5px 5px 0;background:var(--surface-2);overflow:hidden;margin-top:3px}
+  .sfill{display:block;height:100%;border-radius:0 5px 5px 0;min-width:1px;animation:grow .7s cubic-bezier(.25,.9,.3,1) both}
+  .sfill.fam{background:var(--accent)}
+  .sfill.wor{background:repeating-linear-gradient(45deg,var(--warm) 0 4px,var(--warm-soft) 4px 7px)}
+  .wsents{margin:4px 0 2px}
+  .srow{display:flex;align-items:center;gap:10px;margin:7px 0}
+  .srow .slbl{width:86px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+  .srow .strack{flex:1;margin-top:0}
+  .srow .snum{width:30px;font-size:12px;color:var(--ink-soft);text-align:right}
+  .wthemes{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px}
+  .wtag{border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:12.5px;color:var(--ink-soft)}
+  .wtag .mono{font-size:10.5px;color:var(--ink-faint)}
+  .woverlap{margin:12px 0 2px;font-size:14px;background:var(--accent-soft);border-radius:10px;padding:9px 13px}
+  .wquote{border-left:2px solid var(--line);padding:2px 0 2px 13px;margin:12px 0;font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:14.5px;line-height:1.5}
+  .wquote .wname{display:block;font-style:normal;font-family:'Spline Sans Mono',ui-monospace,monospace;font-size:10px;color:var(--ink-faint);margin-top:4px;letter-spacing:.14em;text-transform:uppercase}
+  .wcap{font-size:11.5px;color:var(--ink-faint);margin-top:12px}
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -411,6 +440,26 @@ function apiSave(id, data){
   }
   return fetch(dbPath(id), {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)})
     .then(function(r){ if(!r.ok) throw new Error("save " + r.status); });
+}
+
+/* ---------------- the wider table (world panel digests) ---------------- */
+var worldCache = {};
+function worldQi(q){
+  if(q.qi != null) return q.qi;
+  for(var i = 0; i < QBANK.length; i++) if(QBANK[i].q === q.q) return i;
+  return -1;
+}
+function loadWorld(qi){
+  if(worldCache[qi] !== undefined) return;
+  worldCache[qi] = "loading";
+  chQuery("SELECT digest FROM dajia.world FINAL WHERE q = {q:UInt16} LIMIT 1 FORMAT JSONEachRow", {q:qi})
+    .then(function(text){
+      var line = text.trim().split("\n")[0];
+      worldCache[qi] = line ? JSON.parse(JSON.parse(line).digest) : null;
+      var a = document.activeElement;
+      var typing = a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text"));
+      if(worldCache[qi] && !typing) render();
+    }, function(){ worldCache[qi] = null; });
 }
 
 var roomId = null, roomLoading = false, roomError = null, es = null, pollTimer = null, refreshTimer = null;
@@ -591,6 +640,7 @@ var QBANK = [
   {t:"poll", tag:"This or that", q:"Best decade of music:", o:["70s–80s","90s","2000s","Right now"]},
   {t:"free", tag:"Big & little", q:"What's a question you wish someone would ask you? (Answer it too, if you like.)"}
 ];
+QBANK.forEach(function(q, i){ q.qi = i; }); /* snapshots carry qi so world digests match old days */
 
 /* deterministic pick: same question for everyone on a given family-date */
 function questionForDate(dateKey){
@@ -926,7 +976,70 @@ function renderReveal(dateKey, q, me, isToday){
   var h = '<div style="margin-top:26px"><div class="sectionhead" style="text-align:center">The table is open · ' + entries.length + ' answer' + (entries.length===1?"":"s") + '</div>';
   if(q.t==="poll") h += renderPollReveal(q, entries);
   else h += renderLetters(dateKey, q, entries, me);
+  h += renderWorld(q, entries);
   h += '</div>';
+  return h;
+}
+
+var SENTS = [["warm","Warm"],["funny","Funny"],["wistful","Wistful"],["thoughtful","Thoughtful"]];
+function familyWordSet(entries){
+  var set = {};
+  entries.forEach(function(e){
+    var t = (e.ans.text || "").toLowerCase();
+    (t.match(new RegExp("[a-z\\u00C0-\\u024F\\u0400-\\u04FF'-]{3,}","g")) || []).forEach(function(w){
+      w = w.replace(/^['-]+|['-]+$/g,"").replace(/'/g,"");
+      if(w.length >= 3 && STOP.indexOf(w) < 0) set[w] = true;
+    });
+  });
+  return set;
+}
+function renderWorld(q, entries){
+  if(BACKEND.type !== "clickhouse" || !BACKEND.url) return "";
+  var qi = worldQi(q);
+  if(qi < 0) return "";
+  var w = worldCache[qi];
+  if(w === undefined){ loadWorld(qi); return ""; }
+  if(!w || w === "loading") return "";
+  var h = '<div class="world"><div class="whead"><span class="sectionhead" style="margin:0;color:var(--accent)">Beyond your table</span>' +
+    '<span class="wn mono">panel of ' + w.n + '</span></div>';
+  h += '<div class="wline">' + esc(w.line) + '</div>';
+  if(w.type === "poll" && q.o){
+    var famCounts = q.o.map(function(){ return 0; });
+    entries.forEach(function(e){ if(famCounts[e.ans.choice] != null) famCounts[e.ans.choice]++; });
+    var famTotal = entries.length || 1;
+    h += '<div class="wlegend"><span class="sw fam"></span>your table<span class="sw wor" style="margin-left:14px"></span>the world</div>';
+    q.o.forEach(function(o, i){
+      var fp = Math.round((famCounts[i] / famTotal) * 100);
+      var wp = w.votes[i] || 0;
+      h += '<div class="wopt"><div class="wolbl"><span>' + esc(o) + '</span><span class="mono wonum">you ' + fp + '% · world ' + wp + '%</span></div>' +
+        '<span class="strack"><span class="sfill fam" style="width:' + fp + '%"></span></span>' +
+        '<span class="strack"><span class="sfill wor" style="width:' + wp + '%"></span></span></div>';
+    });
+  } else if(w.type === "free"){
+    h += '<div class="wsents">';
+    SENTS.forEach(function(sp){
+      var n = (w.s && w.s[sp[0]]) || 0;
+      h += '<div class="srow"><span class="slbl">' + sp[1] + '</span>' +
+        '<span class="strack"><span class="sfill wor" style="width:' + n + '%"></span></span>' +
+        '<span class="snum mono">' + n + '</span></div>';
+    });
+    h += '</div>';
+    if(w.themes && w.themes.length){
+      h += '<div class="wthemes">' + w.themes.map(function(t){
+        return '<span class="wtag">' + esc(t[0]) + ' <span class="mono">' + t[1] + '</span></span>';
+      }).join("") + '</div>';
+    }
+    var fam = familyWordSet(entries);
+    var overlap = Object.keys(w.words || {}).filter(function(k){ return fam[k]; })
+      .sort(function(a, b){ return w.words[b] - w.words[a]; }).slice(0, 2);
+    if(overlap.length){
+      h += '<div class="woverlap">Your table said <b>“' + overlap.map(esc).join('”</b> and <b>“') + '”</b> too — right along with the panel.</div>';
+    }
+    (w.quotes || []).forEach(function(qt){
+      h += '<div class="wquote">“' + esc(qt.text) + '”<span class="wname">' + esc(qt.name) + ' · panel</span></div>';
+    });
+  }
+  h += '<div class="wcap">A simulated panel — one hundred generated dinner guests, for perspective. Not real people.</div></div>';
   return h;
 }
 

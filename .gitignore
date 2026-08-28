@@ -1,2 +1,3 @@
 # local snapshots of the live artifact (may contain family data — never commit)
 .live-*
+world/*.jsonl

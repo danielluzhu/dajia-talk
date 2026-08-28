@@ -62,7 +62,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         query = qs["query"][0].lstrip()
         n = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(n)
-        if query.upper().startswith("SELECT"):
+        if query.upper().startswith("SELECT") and "dajia.world" in query:
+            # canned world digest so the "Beyond your table" card is testable locally
+            q = int(qs.get("param_q", ["0"])[0])
+            if q % 2 == 0:
+                digest = {"type": "poll", "n": 100, "votes": [28, 41, 17, 14][:4],
+                          "line": "The world leans 'Pan-fried' — 41 of 100."}
+            else:
+                digest = {"type": "free", "n": 100,
+                          "s": {"warm": 44, "funny": 26, "wistful": 19, "thoughtful": 11},
+                          "themes": [["kitchen", 21], ["grandmother", 17], ["rain", 12], ["summer", 9], ["music", 7]],
+                          "words": {"summer": 14, "kitchen": 21, "warm": 9},
+                          "quotes": [{"name": "Amara", "text": "Woodsmoke and cardamom, my aunt's kitchen every single winter.", "s": "warm"},
+                                     {"name": "Kenji", "text": "Chlorine. Swim practice at 6am, and somehow I miss it.", "s": "funny"}],
+                          "line": "Mostly warm answers out there — 'kitchen' and 'grandmother' came up again and again."}
+            payload = (json.dumps({"digest": json.dumps(digest)}) + "\n").encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        elif query.upper().startswith("SELECT"):
             rid = qs.get("param_id", [None])[0]
             data = CH_STORE.get(rid)
             out = (json.dumps({"data": data}) + "\n") if data is not None else ""
