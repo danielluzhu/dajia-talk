@@ -232,6 +232,9 @@
   .pollrow:nth-child(4) .barfill{animation-delay:.24s}
   .pollrow:nth-child(5) .barfill{animation-delay:.32s}
   .voters{font-size:13px;color:var(--ink-soft)}
+  .pollnotes{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+  .pn{font-size:13px;color:var(--ink-soft);font-style:italic}
+  .pn b{color:var(--ink);font-style:normal}
 
   /* ---------- reveal: letters ---------- */
   .lettergroup{margin-top:18px}
@@ -840,68 +843,70 @@ document.addEventListener("visibilitychange", function(){
 
 /* ---------------- question bank ---------------- */
 var QBANK = [
-  {t:"poll", tag:"Food fight", q:"Rice or noodles — if you had to pick one forever?", o:["Rice","Noodles"]},
-  {t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to childhood?"},
-  {t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"]},
-  {t:"free", tag:"Story time", q:"Describe a meal you'll never forget — where, who, what."},
-  {t:"poll", tag:"This or that", q:"Morning person or night owl?", o:["Up with the sun","Alive after midnight","Depends on the day"]},
-  {t:"free", tag:"Family lore", q:"What's the best piece of advice a family member ever gave you?"},
-  {t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"]},
-  {t:"free", tag:"Small joys", q:"What made you laugh this week?"},
-  {t:"poll", tag:"Would you rather", q:"Would you rather always be 10 minutes late or always 30 minutes early?", o:["10 minutes late","30 minutes early"]},
-  {t:"free", tag:"Memory lane", q:"Share a fond memory of a grandparent."},
+  {t:"poll", tag:"Food fight", q:"The definitive San Francisco burrito:", o:["La Taqueria","El Farolito","Papalote","A secret spot we're not telling"], f:["What's your order?","What's your order?","What's your order?","Okay, spill — where?"]},
+  {t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to a home we've shared?"},
+  {t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"], f:["Defend it in one sentence.","Defend it in one sentence."]},
+  {t:"free", tag:"Story time", q:"Describe a meal we've had together that you'll never forget."},
+  {t:"poll", tag:"City life", q:"Karl the Fog rolls in on our beach day. That's:", o:["Cozy, honestly","Devastating","Classic — we knew better"]},
+  {t:"free", tag:"Family lore", q:"What's the best piece of advice anyone in this family ever gave you?"},
+  {t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"], f:["What's the filling, though?","What's the filling, though?","What's the filling, though?","What's the filling, though?"]},
+  {t:"free", tag:"Small joys", q:"What's the hardest any of us have ever laughed together?"},
+  {t:"poll", tag:"City life", q:"Best way across the bay:", o:["BART","The ferry","Golden Gate Bridge by car","Stay on our side"]},
+  {t:"free", tag:"Memory lane", q:"Share a memory of a grandparent that the rest of us might not know."},
   {t:"poll", tag:"Food fight", q:"Cilantro:", o:["Delicious","Tastes like soap","What's cilantro?"]},
   {t:"free", tag:"Family lore", q:"If our family had a motto, what should it be — and why?"},
-  {t:"poll", tag:"This or that", q:"Beach or mountains?", o:["Beach","Mountains"]},
-  {t:"free", tag:"Small joys", q:"What's one small thing you're grateful for today?"},
+  {t:"poll", tag:"City life", q:"The real best view in San Francisco:", o:["Twin Peaks","Ocean Beach at sunset","The top of Dolores Park","The kitchen window at home"], f:["What's the memory that goes with it?","What's the memory that goes with it?","What's the memory that goes with it?","What's the memory that goes with it?"]},
+  {t:"free", tag:"Small joys", q:"What's one small thing about this family you're grateful for today?"},
   {t:"poll", tag:"Food fight", q:"Pineapple on pizza?", o:["Yes","No","Only when no one's watching"]},
-  {t:"free", tag:"Story time", q:"What's a story about you that the family always retells?"},
-  {t:"poll", tag:"Would you rather", q:"Would you rather cook for the whole family forever, or do the dishes forever?", o:["Cook forever","Dishes forever"]},
-  {t:"free", tag:"Memory lane", q:"What was your favorite hiding spot as a kid?"},
-  {t:"poll", tag:"This or that", q:"When you can't decide what to watch:", o:["Rewatch an old favorite","Something brand new"]},
-  {t:"free", tag:"Big & little", q:"What did you want to be when you were eight years old?"},
-  {t:"poll", tag:"Food fight", q:"Sweet or savory breakfast?", o:["Sweet","Savory","Both, it's called brunch"]},
-  {t:"free", tag:"Family lore", q:"What's a family tradition you hope never dies?"},
-  {t:"poll", tag:"This or that", q:"Karaoke night. You are:", o:["First to grab the mic","Dragged up eventually","Filming from the table"]},
-  {t:"free", tag:"Small joys", q:"A song that reminds you of home — what is it, and why?"},
+  {t:"free", tag:"Story time", q:"What's a story about this family we'll still be telling in twenty years?"},
+  {t:"poll", tag:"Together", q:"Family road trip: who controls the music?", o:["Driver's rules","Youngest, always","Shotgun DJ","One song each, no skips"], f:["First song on the playlist?","First song on the playlist?","First song on the playlist?","First song on the playlist?"]},
+  {t:"free", tag:"Memory lane", q:"What corner of San Francisco feels most like ours — and why?"},
+  {t:"poll", tag:"Together", q:"When we can't decide what to watch together:", o:["Rewatch our old favorite","Something brand new","Argue until everyone falls asleep"], f:["Which one?","What's your pick?","What usually wins in the end?"]},
+  {t:"free", tag:"Big & little", q:"Which family trip would you relive tomorrow if you could?"},
+  {t:"poll", tag:"Food fight", q:"Sweet or savory breakfast?", o:["Sweet","Savory","Both, it's called brunch"], f:["What's the go-to order?","What's the go-to order?","What's the go-to order?"]},
+  {t:"free", tag:"Family lore", q:"What's a family tradition of ours you hope never dies?"},
+  {t:"poll", tag:"Together", q:"Family karaoke night. The mic goes to:", o:["Whoever grabs it first","The reluctant star, eventually","Nobody — we film from the table"], f:["What's the song?","What's the song?","What song would finally get you up there?"]},
+  {t:"free", tag:"Small joys", q:"A song that sounds like this family — what is it, and why?"},
   {t:"poll", tag:"Food fight", q:"Leftover pizza:", o:["Cold, straight from the fridge","Reheated properly","Leftover pizza doesn't survive the night"]},
-  {t:"free", tag:"Big & little", q:"What's the bravest thing you've ever done?"},
-  {t:"poll", tag:"Would you rather", q:"Would you rather spend one week in the past or one week in the future?", o:["The past","The future"]},
-  {t:"free", tag:"Story time", q:"First thing you'd cook for everyone if we were all in one kitchen tomorrow?"},
-  {t:"poll", tag:"This or that", q:"Window or aisle?", o:["Window","Aisle","I sleep before takeoff, doesn't matter"]},
-  {t:"free", tag:"Memory lane", q:"What's a habit you picked up from a parent — for better or worse?"},
+  {t:"free", tag:"Big & little", q:"What's the bravest thing you've seen someone in this family do?"},
+  {t:"poll", tag:"City life", q:"Perfect family Sunday in the city:", o:["Dim sum in the Richmond","Picnic in Golden Gate Park","Ferry Building farmers market","Stay home, board games"], f:["What's the one stop we can't skip?","What's the one stop we can't skip?","What's the one stop we can't skip?","Which game comes out first?"]},
+  {t:"free", tag:"Story time", q:"If we were all in one kitchen tomorrow, what should we cook together?"},
+  {t:"poll", tag:"Together", q:"Family photo time. We need:", o:["One take, nailed it","Forty takes minimum","Someone always blinks","Chaos, but we keep the chaos one"]},
+  {t:"free", tag:"Memory lane", q:"What's a habit we all picked up from the same person — for better or worse?"},
   {t:"poll", tag:"Food fight", q:"Spice tolerance check:", o:["Mild, please","Medium","Bring the fire","Why is this water spicy"]},
-  {t:"free", tag:"Small joys", q:"Describe your perfect Sunday, hour by hour or roughly."},
-  {t:"poll", tag:"Would you rather", q:"Would you rather speak every language or play every instrument?", o:["Every language","Every instrument"]},
-  {t:"free", tag:"Big & little", q:"What would you tell your 15-year-old self?"},
-  {t:"poll", tag:"This or that", q:"Calling or texting?", o:["Call me","Text me","Voice notes, obviously"]},
-  {t:"free", tag:"Family lore", q:"What's the funniest family mishap you remember?"},
-  {t:"poll", tag:"Food fight", q:"The best part of a big family meal:", o:["The appetizers","The main event","Dessert","The leftovers tomorrow"]},
-  {t:"free", tag:"Memory lane", q:"Describe a photo you wish existed."},
-  {t:"poll", tag:"This or that", q:"Board games or card games?", o:["Board games","Card games","Whatever ends in an argument"]},
-  {t:"free", tag:"Small joys", q:"What's something small that made today better?"},
-  {t:"poll", tag:"Food fight", q:"Which condiment could you not live without?", o:["Soy sauce","Hot sauce","Ketchup","Mayo"]},
-  {t:"free", tag:"Big & little", q:"What's something you're proud of from this year?"},
-  {t:"poll", tag:"Would you rather", q:"Would you rather teleport anywhere once a year, or have free flights forever (with layovers)?", o:["One teleport a year","Free flights forever"]},
-  {t:"free", tag:"Story time", q:"What's your comfort food, and who introduced you to it?"},
-  {t:"poll", tag:"This or that", q:"Rain all day. That's:", o:["Cozy","Gloomy","An excuse to nap"]},
+  {t:"free", tag:"Small joys", q:"Describe our perfect shared Sunday in San Francisco, hour by hour or roughly."},
+  {t:"poll", tag:"City life", q:"Sourdough:", o:["Boudin or bust","Tartine, obviously","Any warm loaf","Overrated (sorry, city)"]},
+  {t:"free", tag:"Big & little", q:"What would you tell this whole family, fifteen years ago?"},
+  {t:"poll", tag:"Together", q:"Our family group chat energy:", o:["Memes only","Logistics and reminders","Photos of food","Months of silence, then chaos"], f:["What was the last thing that set it off?","What was the last thing that set it off?","What was the last thing that set it off?","What was the last thing that set it off?"]},
+  {t:"free", tag:"Family lore", q:"What's the funniest family mishap we've survived together?"},
+  {t:"poll", tag:"Food fight", q:"The best part of a big family meal:", o:["The appetizers","The main event","Dessert","The leftovers tomorrow"], f:["Name the dish.","Name the dish.","Name the dish.","Name the dish."]},
+  {t:"free", tag:"Memory lane", q:"Describe a family photo you wish existed."},
+  {t:"poll", tag:"Together", q:"Board games or card games?", o:["Board games","Card games","Whatever ends in an argument"], f:["Which one gets too competitive?","Which one gets too competitive?","Which one gets too competitive?"]},
+  {t:"free", tag:"Small joys", q:"What's something small this week that reminded you of us?"},
+  {t:"poll", tag:"Food fight", q:"Which condiment could our table not live without?", o:["Soy sauce","Hot sauce","Ketchup","Mayo"]},
+  {t:"free", tag:"Big & little", q:"What's something this family should be proud of from this year?"},
+  {t:"poll", tag:"City life", q:"A perfect day trip from the city:", o:["Point Reyes","Half Moon Bay","Napa or Sonoma","Santa Cruz boardwalk"], f:["What do we do first when we get there?","What do we do first when we get there?","What do we do first when we get there?","What do we do first when we get there?"]},
+  {t:"free", tag:"Story time", q:"What's our family's true comfort food, and who started it?"},
+  {t:"poll", tag:"Together", q:"Rain all day, all of us inside. That's:", o:["Cozy","Gloomy","An excuse for a group nap"]},
   {t:"free", tag:"Memory lane", q:"What do you miss most about all being in one place?"},
-  {t:"poll", tag:"Food fight", q:"Cake or pie?", o:["Cake","Pie","Ice cream was the answer all along"]},
-  {t:"free", tag:"Big & little", q:"What's a talent you wish you had?"},
-  {t:"poll", tag:"This or that", q:"Ideal family reunion:", o:["Beach house","Big city trip","Someone's living room","Chaotic road trip"]},
-  {t:"free", tag:"Small joys", q:"What are you most looking forward to this month?"},
-  {t:"poll", tag:"Food fight", q:"Soup is:", o:["For any weather","Strictly cold-weather food","A drink"]},
-  {t:"free", tag:"Story time", q:"Tell us about the best gift you've ever received."},
-  {t:"poll", tag:"Would you rather", q:"Would you rather know every family recipe by heart, or every family story by heart?", o:["The recipes","The stories"]},
+  {t:"poll", tag:"Food fight", q:"Cake or pie?", o:["Cake","Pie","Ice cream was the answer all along"], f:["Which flavor, specifically?","Which flavor, specifically?","Which flavor, specifically?"]},
+  {t:"free", tag:"Big & little", q:"What's a skill one of us has that the rest of us should finally learn?"},
+  {t:"poll", tag:"Together", q:"Ideal family reunion:", o:["Beach house","Big city trip","Someone's living room","Chaotic road trip"], f:["Where, exactly?","Where, exactly?","Whose, and why theirs?","What's the route?"]},
+  {t:"free", tag:"Small joys", q:"What are you most looking forward to doing together this year?"},
+  {t:"poll", tag:"Food fight", q:"Soup is:", o:["For any weather","Strictly fog-weather food","A drink"], f:["Which soup, though?","Which soup, though?","Which soup, though?"]},
+  {t:"free", tag:"Story time", q:"What's the best gift anyone in this family ever gave — from either end of it?"},
+  {t:"poll", tag:"Family lore", q:"Would you rather know every family recipe by heart, or every family story by heart?", o:["The recipes","The stories"], f:["Which recipe would you learn first?","Which story would you keep first?"]},
   {t:"free", tag:"Big & little", q:"Describe 'home' in three sentences."},
-  {t:"poll", tag:"This or that", q:"Breakfast for dinner:", o:["Always yes","Breakfast has a time and a place"]},
-  {t:"free", tag:"Family lore", q:"What's something you learned recently that surprised you?"},
-  {t:"poll", tag:"Food fight", q:"The last bite of a shared dish belongs to:", o:["Whoever's fastest","The youngest","The eldest","Split it into tiny pieces"]},
-  {t:"free", tag:"Memory lane", q:"What place would you take us all to, if money were no object?"},
-  {t:"poll", tag:"This or that", q:"Best decade of music:", o:["70s–80s","90s","2000s","Right now"]},
-  {t:"free", tag:"Big & little", q:"What's a question you wish someone would ask you? (Answer it too, if you like.)"}
+  {t:"poll", tag:"Food fight", q:"Breakfast for dinner:", o:["Always yes","Breakfast has a time and a place"]},
+  {t:"free", tag:"Family lore", q:"What's something you learned about this family recently that surprised you?"},
+  {t:"poll", tag:"Together", q:"The last bite of a shared dish belongs to:", o:["Whoever's fastest","The youngest","The eldest","Split it into tiny pieces"]},
+  {t:"free", tag:"Memory lane", q:"If money were no object, where should this family go together — and what's first on the list?"},
+  {t:"poll", tag:"Together", q:"The soundtrack of our family car rides was:", o:["70s–80s","90s","2000s","Whatever the radio gave us"], f:["What was THE song?","What was THE song?","What was THE song?","What was THE song?"]},
+  {t:"free", tag:"Big & little", q:"What's a question you wish this family asked each other more often? (Answer it too.)"}
 ];
 QBANK.forEach(function(q, i){ q.qi = i; }); /* snapshots carry qi so world digests match old days */
+/* every table's first question: maximum opinions, zero stakes */
+var STARTER_QI = 2; /* "Is a hot dog a sandwich?" */
 
 /* day keys can carry a round suffix: "2026-08-28", "2026-08-28#2", ... —
    a table can run several questions in one day once a round completes */
@@ -1063,6 +1068,7 @@ function computeTrends(entries){
 var view = "today";      /* today | archive | family | day:YYYY-MM-DD */
 var draftText = "";
 var draftChoice = null;
+var draftNote = "";
 var editingAnswer = false;
 var app = document.getElementById("app");
 
@@ -1185,7 +1191,7 @@ function renderDay(dateKey, me, isToday){
       h += renderComposer(q, myAns);
     } else if(!unlocked){
       h += '<div class="card"><div class="sectionhead">Your answer</div><div class="yourline">' +
-        (q.t==="poll" ? '<div class="txt"><b>' + esc(q.o[myAns.choice]) + '</b></div>'
+        (q.t==="poll" ? '<div class="txt"><b>' + esc(q.o[myAns.choice]) + '</b>' + (myAns.note ? ' — “' + esc(myAns.note) + '”' : '') + '</div>'
                       : '<div class="txt">' + esc(myAns.text) + '</div>') +
         '</div>' +
         '<div class="btnrow"><button class="btn ghost small" data-act="editans">Change answer</button></div>' +
@@ -1227,6 +1233,11 @@ function renderComposer(q, myAns){
     h += '<div class="polloptions">' + q.o.map(function(o,i){
       return '<button class="opt' + (sel===i?" sel":"") + '" data-act="pickopt" data-i="' + i + '"><span class="radio"></span>' + esc(o) + '</button>';
     }).join("") + '</div>';
+    if(sel != null && q.f && q.f[sel]){
+      var noteVal = draftNote || (myAns && myAns.note ? myAns.note : "");
+      h += '<div class="field"><label for="pollnote">' + esc(q.f[sel]) + ' <span class="hint" style="font-weight:400">(optional)</span></label>' +
+        '<input type="text" id="pollnote" maxlength="200" placeholder="A few words is plenty" value="' + esc(noteVal) + '"></div>';
+    }
     h += '<div class="btnrow"><button class="btn" data-act="submit" ' + (sel==null?"disabled":"") + '>Lock it in</button>';
   } else {
     var val = draftText || (myAns ? myAns.text : "");
@@ -1332,7 +1343,13 @@ function renderWorld(q, entries){
 
 function renderPollReveal(q, entries){
   var counts = q.o.map(function(){ return []; });
-  entries.forEach(function(e){ if(counts[e.ans.choice]) counts[e.ans.choice].push(e.name); });
+  var notes = q.o.map(function(){ return []; });
+  entries.forEach(function(e){
+    if(counts[e.ans.choice]){
+      counts[e.ans.choice].push(e.name);
+      if(e.ans.note) notes[e.ans.choice].push({name:e.name, note:e.ans.note});
+    }
+  });
   var total = entries.length;
   var max = Math.max.apply(null, counts.map(function(c){return c.length;}));
   var h = '<div class="card">';
@@ -1342,7 +1359,13 @@ function renderPollReveal(q, entries){
       (n===max && n>0 ? '<span class="lead mono">★ LEADING</span>' : '') + '</span>' +
       '<span class="num mono">' + n + ' · ' + pct + '%</span></div>' +
       '<div class="bartrack"><div class="barfill" style="width:' + (total? (n/total*100) : 0) + '%"></div></div>' +
-      '<div class="voters">' + (n ? counts[i].map(esc).join(" · ") : "—") + '</div></div>';
+      '<div class="voters">' + (n ? counts[i].map(esc).join(" · ") : "—") + '</div>';
+    if(notes[i].length){
+      h += '<div class="pollnotes">' + notes[i].map(function(x){
+        return '<span class="pn"><b>' + esc(x.name) + '</b> “' + esc(x.note) + '”</span>';
+      }).join("") + '</div>';
+    }
+    h += '</div>';
   });
   h += '</div>';
   return h;
@@ -1556,12 +1579,12 @@ function loadSample(){
   ];
   var days = {};
   days[shift(-2)] = {
-    q:{t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"]},
-    answers:{m1:{choice:1,at:0},m2:{choice:0,at:0},m3:{choice:0,at:0},m4:{choice:1,at:0},m5:{choice:0,at:0},m6:{choice:1,at:0},m7:{choice:0,at:0}},
+    q:{t:"poll", tag:"Food fight", q:"Is a hot dog a sandwich?", o:["Yes, obviously","Absolutely not"], f:["Defend it in one sentence.","Defend it in one sentence."]},
+    answers:{m1:{choice:1,at:0,note:"a sandwich does not snap when you bite it"},m2:{choice:0,at:0},m3:{choice:0,at:0,note:"it's meat in bread, case closed"},m4:{choice:1,at:0},m5:{choice:0,at:0},m6:{choice:1,at:0},m7:{choice:0,at:0}},
     reactions:{}
   };
   days[shift(-1)] = {
-    q:{t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to childhood?"},
+    q:{t:"free", tag:"Memory lane", q:"What's a smell that instantly takes you back to a home we've shared?"},
     answers:{
       m1:{text:"Orange peel drying on the radiator. Mamã used to line them up every winter and the whole flat smelled like Christmas for months.",at:1},
       m2:{text:"Petrol at the ferry dock, honestly. It means summer is starting and we're going to the island.",at:2},
@@ -1574,8 +1597,8 @@ function loadSample(){
     reactions:{m6:{"❤️":["m3","m5","m1"]}, m5:{"😂":["m6","m4"]}}
   };
   days[now.dateKey] = {
-    q:{t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"]},
-    answers:{m1:{choice:1,at:0},m2:{choice:3,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0},m6:{choice:2,at:0},m7:{choice:0,at:0}},
+    q:{t:"poll", tag:"Food fight", q:"What's the correct way to make a dumpling?", o:["Steamed","Pan-fried","Boiled","Deep-fried"], f:["What's the filling, though?","What's the filling, though?","What's the filling, though?","What's the filling, though?"]},
+    answers:{m1:{choice:1,at:0,note:"chive and egg, crispy bottom"},m2:{choice:3,at:0},m3:{choice:1,at:0},m4:{choice:0,at:0,note:"shrimp har gow or nothing"},m6:{choice:2,at:0,note:"pork and napa, like my mother made"},m7:{choice:0,at:0}},
     reactions:{}
   };
   sampleChat = {};
@@ -1595,6 +1618,7 @@ document.addEventListener("input", function(ev){
   var t = ev.target;
   if(t && t.id === "freetext") draftText = t.value;
   if(t && t.id === "chatinput") chatDraft = t.value;
+  if(t && t.id === "pollnote") draftNote = t.value;
 });
 document.addEventListener("keydown", function(ev){
   if(ev.key === "Enter" && ev.target && ev.target.id === "chatinput"){
@@ -1608,7 +1632,7 @@ document.addEventListener("click", function(ev){
   if(!el) return;
   var act = el.getAttribute("data-act");
 
-  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; chatDraft=""; chatReplyTo=null; render(); }
+  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; draftNote=""; chatDraft=""; chatReplyTo=null; render(); }
   else if(act==="gotofamily"){ view="family"; render(); }
   else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
   else if(act==="switchme"){
@@ -1632,8 +1656,8 @@ document.addEventListener("click", function(ev){
     draftText = ""; draftChoice = null; worldCache = {};
     save();
   }
-  else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; render(); }
-  else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; render(); }
+  else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; draftNote=""; render(); }
+  else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; draftNote=""; render(); }
   else if(act==="submit"){
     var me = getMe(); if(!me) return;
     var dateKey = currentRoundKey();
@@ -1643,14 +1667,17 @@ document.addEventListener("click", function(ev){
       var prev = d.answers[me.id];
       var sel = draftChoice!=null ? draftChoice : (prev ? prev.choice : null);
       if(sel==null) return;
+      var noteEl = document.getElementById("pollnote");
+      var note = (noteEl ? noteEl.value : draftNote).trim().slice(0, 200);
       d.answers[me.id] = {choice:sel, at:Date.now()};
+      if(note) d.answers[me.id].note = note;
     } else {
       var ta = document.getElementById("freetext");
       var txt = (ta ? ta.value : draftText).trim();
       if(!txt){ toast("Write a little something first"); return; }
       d.answers[me.id] = {text:txt, at:Date.now()};
     }
-    editingAnswer=false; draftText=""; draftChoice=null;
+    editingAnswer=false; draftText=""; draftChoice=null; draftNote="";
     save();
   }
   else if(act==="react"){
@@ -1689,6 +1716,7 @@ document.addEventListener("click", function(ev){
     state.members = names.map(function(n){ return {id:uid(), name:n}; });
     state.setup = true;
     state.createdAt = famParts().dateKey;
+    state.days[state.createdAt] = {q:QBANK[STARTER_QI], answers:{}, reactions:{}};
     save();
   }
   else if(act==="loadsample"){
@@ -1713,6 +1741,7 @@ document.addEventListener("click", function(ev){
     var tzVal = rt ? rt.value : null;
     var room = {v:2, setup:true, familyName:famName2, tz:tzVal, revealHour:18,
       createdAt: famParts(tzVal).dateKey, members:[creator], days:{}};
+    room.days[room.createdAt] = {q:QBANK[STARTER_QI], answers:{}, reactions:{}};
     el.disabled = true; el.textContent = "Setting the table…";
     freshRoomId(3).then(function(newId){
       return apiSave(newId, room).then(function(){
