@@ -1,239 +1,341 @@
 <meta charset="utf-8">
 <title>Dajia Talks</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Karla:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Karla:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --ground:#F3F1E9;
-    --surface:#FBFAF4;
-    --surface-2:#EFECE1;
-    --ink:#242B25;
-    --ink-soft:#5F6A62;
-    --ink-faint:#8B958C;
-    --accent:#38684C;
-    --accent-ink:#FBFAF4;
-    --accent-soft:#DCE7DE;
-    --warm:#B97A1E;
-    --warm-soft:#F2E4CB;
-    --line:#DBD6C6;
-    --line-soft:#E7E3D6;
-    --danger:#9C3D2E;
-    --shadow:0 1px 2px rgba(36,43,37,.06), 0 6px 24px rgba(36,43,37,.05);
+    --ground:#F4F1E8;
+    --surface:#FCFBF5;
+    --surface-2:#EDE9DB;
+    --ink:#242B24;
+    --ink-soft:#5E6960;
+    --ink-faint:#8E978D;
+    --accent:#35664A;
+    --accent-deep:#2A5540;
+    --accent-ink:#F6F7EF;
+    --accent-soft:#DBE7DE;
+    --warm:#B97C20;
+    --warm-soft:#F3E5C5;
+    --seal:#AF4030;
+    --seal-ink:#F8ECDD;
+    --line:#DBD5C2;
+    --line-soft:#E8E3D2;
+    --glow:rgba(205,146,52,.13);
+    --av-s:45%; --av-l:82%; --av-cs:50%; --av-cl:27%;
+    --shadow:0 1px 2px rgba(36,43,37,.05), 0 16px 36px -20px rgba(36,43,37,.28);
+    --shadow-pop:0 8px 22px -8px rgba(36,43,37,.3);
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ground:#151B17;
-      --surface:#1E2620;
-      --surface-2:#242D26;
-      --ink:#E9E7DB;
-      --ink-soft:#9AA69C;
-      --ink-faint:#6E7A70;
-      --accent:#8CBD9C;
-      --accent-ink:#13291B;
+      --ground:#131A15;
+      --surface:#1C241E;
+      --surface-2:#232C25;
+      --ink:#EAE7DA;
+      --ink-soft:#9CA89D;
+      --ink-faint:#6F7B71;
+      --accent:#8FC0A0;
+      --accent-deep:#A5CFB3;
+      --accent-ink:#122619;
       --accent-soft:#2A3B30;
-      --warm:#E3AA5C;
-      --warm-soft:#3A3220;
-      --line:#333D35;
-      --line-soft:#2A332C;
-      --danger:#E08D7C;
-      --shadow:0 1px 2px rgba(0,0,0,.25), 0 6px 24px rgba(0,0,0,.2);
+      --warm:#E0A65A;
+      --warm-soft:#3A3222;
+      --seal:#C05B44;
+      --seal-ink:#F8ECDD;
+      --line:#303A32;
+      --line-soft:#283129;
+      --glow:rgba(224,166,90,.08);
+      --av-s:26%; --av-l:28%; --av-cs:38%; --av-cl:80%;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 16px 36px -20px rgba(0,0,0,.55);
+      --shadow-pop:0 8px 22px -8px rgba(0,0,0,.5);
     }
   }
   :root[data-theme="dark"]{
-    --ground:#151B17;
-    --surface:#1E2620;
-    --surface-2:#242D26;
-    --ink:#E9E7DB;
-    --ink-soft:#9AA69C;
-    --ink-faint:#6E7A70;
-    --accent:#8CBD9C;
-    --accent-ink:#13291B;
+    --ground:#131A15;
+    --surface:#1C241E;
+    --surface-2:#232C25;
+    --ink:#EAE7DA;
+    --ink-soft:#9CA89D;
+    --ink-faint:#6F7B71;
+    --accent:#8FC0A0;
+    --accent-deep:#A5CFB3;
+    --accent-ink:#122619;
     --accent-soft:#2A3B30;
-    --warm:#E3AA5C;
-    --warm-soft:#3A3220;
-    --line:#333D35;
-    --line-soft:#2A332C;
-    --danger:#E08D7C;
-    --shadow:0 1px 2px rgba(0,0,0,.25), 0 6px 24px rgba(0,0,0,.2);
+    --warm:#E0A65A;
+    --warm-soft:#3A3222;
+    --seal:#C05B44;
+    --seal-ink:#F8ECDD;
+    --line:#303A32;
+    --line-soft:#283129;
+    --glow:rgba(224,166,90,.08);
+    --av-s:26%; --av-l:28%; --av-cs:38%; --av-cl:80%;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 16px 36px -20px rgba(0,0,0,.55);
+    --shadow-pop:0 8px 22px -8px rgba(0,0,0,.5);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    background:var(--ground);
+    background-color:var(--ground);
+    background-image:radial-gradient(900px 460px at 50% -140px, var(--glow), transparent 70%);
+    background-repeat:no-repeat;
     color:var(--ink);
     font-family:'Karla',system-ui,-apple-system,sans-serif;
     font-size:16px;line-height:1.55;
     -webkit-font-smoothing:antialiased;
   }
   .mono{font-family:'Spline Sans Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
-  .wrap{max-width:660px;margin:0 auto;padding:20px 20px 96px}
+  .wrap{max-width:680px;margin:0 auto;padding:22px 20px 110px}
   a{color:var(--accent)}
   button{font:inherit;color:inherit;cursor:pointer}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}}
+  @keyframes grow{from{width:0}}
+  @keyframes press{from{opacity:0;transform:scale(.85) rotate(-14deg)}}
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important;transition:none !important}
   }
 
   /* ---------- header ---------- */
   header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
-  .wordmark{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;letter-spacing:.01em}
+  .wordmark{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:24px;letter-spacing:.005em}
   .wordmark .dot{color:var(--warm)}
+  .wordmark .cjk{font-size:11px;color:var(--ink-faint);margin-left:9px;letter-spacing:.4em;font-weight:400;font-family:system-ui,sans-serif}
   .famname{font-size:13px;color:var(--ink-soft);text-align:right}
-  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:10px 0 0}
+  nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:12px 0 0}
   nav.tabs button{
-    background:none;border:none;padding:8px 12px 10px;font-size:14px;font-weight:600;
-    color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px;
+    background:none;border:none;padding:9px 13px 11px;font-size:13.5px;font-weight:700;
+    letter-spacing:.02em;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px;
+    transition:color .15s;
   }
+  nav.tabs button:hover{color:var(--ink)}
   nav.tabs button.on{color:var(--ink);border-bottom-color:var(--warm)}
-  .clockline{font-size:12px;color:var(--ink-faint);margin:14px 2px 0;letter-spacing:.02em}
+  .clockline{font-size:11.5px;color:var(--ink-faint);margin:16px 2px 0;letter-spacing:.03em;text-align:center}
 
   /* ---------- question hero ---------- */
   .eyebrow{
-    display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;
-    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
-    margin:34px 0 14px;
+    display:flex;gap:12px;align-items:center;justify-content:center;
+    max-width:440px;margin:36px auto 18px;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);
+    animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
   }
-  .eyebrow .tag{color:var(--warm);font-weight:500}
+  .eyebrow::before,.eyebrow::after{content:"";flex:1;height:1px}
+  .eyebrow::before{background:linear-gradient(90deg,transparent,var(--line))}
+  .eyebrow::after{background:linear-gradient(90deg,var(--line),transparent)}
+  .eyebrow .tag{color:var(--warm);font-weight:500;white-space:nowrap}
   .eyebrow .sep{color:var(--line)}
   h1.q{
     font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:500;
-    font-size:clamp(28px,5.6vw,40px);line-height:1.18;text-align:center;
-    margin:0 auto 8px;max-width:560px;text-wrap:balance;letter-spacing:-.005em;
+    font-size:clamp(30px,6vw,44px);line-height:1.14;text-align:center;
+    margin:0 auto;max-width:580px;text-wrap:balance;letter-spacing:-.012em;
+    animation:rise .55s cubic-bezier(.2,.7,.2,1) .07s both;
   }
-  .qsub{text-align:center;color:var(--ink-soft);font-size:14px;margin:0 0 28px}
+  .sprig{text-align:center;color:var(--warm);margin:16px 0 10px;animation:rise .55s cubic-bezier(.2,.7,.2,1) .14s both}
+  .qsub{text-align:center;color:var(--ink-soft);font-size:14px;margin:0 auto 30px;max-width:52ch;animation:rise .55s cubic-bezier(.2,.7,.2,1) .18s both}
 
   /* ---------- cards & composer ---------- */
-  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow)}
   .card + .card{margin-top:14px}
   .stack > * + *{margin-top:14px}
   .composer textarea{
-    width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:10px;
-    background:var(--ground);color:var(--ink);padding:12px 14px;font:inherit;line-height:1.5;
+    width:100%;min-height:120px;resize:vertical;border:1px solid var(--line);border-radius:12px;
+    background:var(--ground);color:var(--ink);padding:13px 15px;font:inherit;line-height:1.55;
+    transition:border-color .15s, box-shadow .15s;
   }
   .composer textarea::placeholder{color:var(--ink-faint)}
+  .composer textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .polloptions{display:flex;flex-direction:column;gap:10px}
   .polloptions button.opt{
-    text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);
-    padding:13px 16px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;
-    transition:border-color .12s, background .12s;
+    text-align:left;border:1.5px solid var(--line);border-radius:13px;background:var(--surface);
+    padding:14px 17px;font-size:16px;font-weight:600;display:flex;align-items:center;gap:13px;
+    transition:border-color .15s, background .15s, transform .15s;
   }
-  .polloptions button.opt:hover{border-color:var(--accent)}
+  .polloptions button.opt:hover{border-color:var(--accent);transform:translateX(2px)}
   .polloptions button.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
-  .polloptions .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-faint);flex:none}
-  .polloptions .sel .radio{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--surface)}
-  .btnrow{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .polloptions .radio{width:17px;height:17px;border-radius:50%;border:2px solid var(--ink-faint);flex:none;transition:all .15s}
+  .polloptions .sel .radio{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3.5px var(--surface)}
+  .btnrow{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap}
   .btn{
-    border:none;border-radius:999px;padding:10px 20px;font-weight:700;font-size:15px;
-    background:var(--accent);color:var(--accent-ink);
+    border:none;border-radius:999px;padding:11px 22px;font-weight:700;font-size:15px;
+    letter-spacing:.01em;background:var(--accent);color:var(--accent-ink);
+    box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:background .15s, transform .15s, box-shadow .15s;
   }
+  .btn:hover:not(:disabled){background:var(--accent-deep);transform:translateY(-1px);box-shadow:var(--shadow-pop)}
+  .btn:active:not(:disabled){transform:translateY(0);box-shadow:0 1px 2px rgba(0,0,0,.12)}
   .btn:disabled{opacity:.5;cursor:default}
-  .btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink);font-weight:600}
-  .btn.small{padding:6px 14px;font-size:13px}
+  .btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink);font-weight:600;box-shadow:none}
+  .btn.ghost:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-faint)}
+  .btn.small{padding:7px 15px;font-size:13px}
   .linkbtn{background:none;border:none;padding:0;color:var(--accent);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
   .hint{font-size:13px;color:var(--ink-soft)}
 
-  /* ---------- presence ---------- */
+  /* ---------- section labels ---------- */
   .presence h3, .sectionhead{
-    font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
-    font-weight:600;margin:0 0 10px;
+    font-family:'Spline Sans Mono',ui-monospace,monospace;
+    font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);
+    font-weight:500;margin:0 0 12px;
   }
-  .grouprow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding:9px 0;border-top:1px solid var(--line-soft)}
-  .grouprow:first-of-type{border-top:none}
-  .gname{font-weight:700;font-size:14px;min-width:110px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{
-    display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
-    border-radius:999px;padding:3px 11px;border:1px solid var(--line);color:var(--ink-soft);
-  }
-  .chip.done{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
-  .chip.done::before{content:"✓";color:var(--accent);font-weight:700}
-  .chip.me{box-shadow:0 0 0 1.5px var(--warm)}
 
-  /* ---------- lock / countdown ---------- */
-  .lock{text-align:center;padding:26px 20px;margin-top:14px}
-  .lock .big{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:500;margin:6px 0 4px}
+  /* ---------- people ---------- */
+  .grouprow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:6px 0}
+  .gname{font-weight:700;font-size:12px;color:var(--ink-faint);min-width:80px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
+    border-radius:999px;padding:3px 12px 3px 4px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink-soft);
+  }
+  .chip .av, .who .av, .whoami .grid button .av{
+    width:23px;height:23px;border-radius:50%;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;font-family:'Karla',sans-serif;
+    background:hsl(var(--avh,140) var(--av-s) var(--av-l));
+    color:hsl(var(--avh,140) var(--av-cs) var(--av-cl));
+  }
+  .chip.done{border-color:transparent;background:var(--accent-soft);color:var(--ink)}
+  .chip.done .av{background:var(--accent);color:var(--accent-ink)}
+  .chip.me{box-shadow:0 0 0 1.5px var(--warm)}
+  a.chip{text-decoration:none;padding:6px 16px;font-size:14px;transition:border-color .15s, transform .15s}
+  a.chip:hover{border-color:var(--accent);transform:translateY(-1px)}
+
+  /* ---------- lock / seal ---------- */
+  .lock{text-align:center;padding:30px 22px;margin-top:16px}
+  .lock .big{font-family:'Fraunces',Georgia,serif;font-size:21px;font-weight:500;margin:6px 0 5px;text-wrap:balance}
   .lock .count{color:var(--warm);font-weight:500}
+  .seal{
+    width:58px;height:58px;margin:2px auto 16px;border-radius:15px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--seal);color:var(--seal-ink);
+    font-size:27px;font-weight:600;font-family:Georgia,'Fraunces',serif;
+    box-shadow:inset 0 0 0 2px var(--seal), inset 0 0 0 4px var(--seal-ink), 0 3px 12px -3px rgba(0,0,0,.35);
+    transform:rotate(-5deg);
+    animation:press .5s cubic-bezier(.2,.8,.3,1.2) .1s both;
+  }
 
   /* ---------- reveal: poll ---------- */
-  .pollrow{padding:12px 0;border-top:1px solid var(--line-soft)}
-  .pollrow:first-child{border-top:none}
+  .pollrow{padding:13px 0;border-top:1px solid var(--line-soft)}
+  .pollrow:first-child{border-top:none;padding-top:4px}
   .pollhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .pollhead .lbl{font-weight:700;font-size:15px}
   .pollhead .num{font-size:13px;color:var(--ink-soft)}
-  .lead{font-size:10.5px;letter-spacing:.1em;color:var(--warm);font-weight:500;margin-left:8px}
-  .bartrack{height:12px;border-radius:0 6px 6px 0;background:var(--surface-2);margin:7px 0 6px;overflow:hidden}
-  .barfill{height:100%;background:var(--accent);border-radius:0 6px 6px 0;min-width:2px}
+  .lead{font-size:10px;letter-spacing:.12em;color:var(--warm);font-weight:500;margin-left:8px}
+  .bartrack{height:13px;border-radius:0 7px 7px 0;background:var(--surface-2);margin:8px 0 7px;overflow:hidden}
+  .barfill{
+    height:100%;background:linear-gradient(90deg,var(--accent-deep),var(--accent));
+    border-radius:0 7px 7px 0;min-width:2px;
+    animation:grow .8s cubic-bezier(.25,.9,.3,1) both;
+  }
+  .pollrow:nth-child(2) .barfill{animation-delay:.08s}
+  .pollrow:nth-child(3) .barfill{animation-delay:.16s}
+  .pollrow:nth-child(4) .barfill{animation-delay:.24s}
+  .pollrow:nth-child(5) .barfill{animation-delay:.32s}
   .voters{font-size:13px;color:var(--ink-soft)}
 
   /* ---------- reveal: letters ---------- */
   .lettergroup{margin-top:18px}
-  .letter{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
-  .letter + .letter{margin-top:10px}
-  .letter .from{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
-  .letter .who{font-weight:700;font-size:14px}
+  .letter{
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;
+    padding:16px 18px;box-shadow:var(--shadow);
+    animation:rise .5s cubic-bezier(.2,.7,.2,1) both;
+    transition:transform .2s, box-shadow .2s;
+  }
+  .letter + .letter{margin-top:12px}
+  .lettergroup .letter:nth-child(odd){transform:rotate(-.4deg)}
+  .lettergroup .letter:nth-child(even){transform:rotate(.35deg)}
+  .lettergroup .letter:nth-child(2){animation-delay:.07s}
+  .lettergroup .letter:nth-child(3){animation-delay:.14s}
+  .lettergroup .letter:nth-child(4){animation-delay:.21s}
+  .lettergroup .letter:nth-child(5){animation-delay:.28s}
+  .lettergroup .letter:nth-child(n+6){animation-delay:.34s}
+  .letter:hover{transform:rotate(0) translateY(-2px);box-shadow:var(--shadow-pop)}
+  .letter .from{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+  .letter .who{font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px}
   .letter .when{font-size:11.5px;color:var(--ink-faint)}
-  .letter .txt{font-size:15.5px;line-height:1.6;white-space:pre-wrap}
-  .reacts{display:flex;gap:6px;margin-top:10px}
+  .letter .txt{font-size:15.5px;line-height:1.62;white-space:pre-wrap}
+  .reacts{display:flex;gap:6px;margin-top:12px}
   .reacts button{
     border:1px solid var(--line);background:none;border-radius:999px;padding:2px 10px;
-    font-size:13px;color:var(--ink-soft);
+    font-size:13px;color:var(--ink-soft);transition:transform .15s, background .15s, border-color .15s;
   }
+  .reacts button:hover{transform:scale(1.08);border-color:var(--warm)}
   .reacts button.mine{background:var(--warm-soft);border-color:transparent;color:var(--ink)}
 
   /* ---------- trends ---------- */
-  .trends{background:var(--warm-soft);border-radius:14px;padding:18px 20px;margin-top:14px}
-  .trends h3{margin:0 0 8px;font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:17px}
+  .trends{background:var(--warm-soft);border-radius:16px;padding:19px 22px;margin-top:14px;animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+  .trends h3{margin:0 0 9px;font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:17.5px}
+  .trends h3::before{content:"✦";color:var(--warm);margin-right:8px;font-size:14px}
   .trends ul{margin:0;padding-left:18px}
   .trends li{margin:4px 0;font-size:14.5px}
   .trends .w{font-weight:700}
-  .trends .foot{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+  .trends .foot{font-size:12.5px;color:var(--ink-soft);margin-top:11px}
 
   /* ---------- archive ---------- */
   .dayrow{
     display:flex;gap:14px;align-items:baseline;width:100%;text-align:left;
-    background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;
-    padding:14px 16px;box-shadow:var(--shadow);
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:14px;
+    padding:15px 18px;box-shadow:var(--shadow);
+    transition:transform .15s, box-shadow .15s, border-color .15s;
   }
-  .dayrow + .dayrow{margin-top:10px}
-  .dayrow .d{font-size:12px;color:var(--ink-soft);min-width:86px}
-  .dayrow .qq{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:500;flex:1}
-  .dayrow .n{font-size:12px;color:var(--ink-faint);white-space:nowrap}
+  .dayrow:hover{transform:translateY(-1px);box-shadow:var(--shadow-pop);border-color:var(--line)}
+  .dayrow + .dayrow{margin-top:11px}
+  .dayrow .d{font-size:11.5px;color:var(--ink-soft);min-width:86px;line-height:1.5}
+  .dayrow .qq{font-family:'Fraunces',Georgia,serif;font-size:16.5px;font-weight:500;flex:1;line-height:1.3}
+  .dayrow .n{font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
   .backrow{margin:18px 0 6px}
 
-  /* ---------- forms / setup ---------- */
-  .field{margin-top:14px}
-  .field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+  /* ---------- forms / heroes ---------- */
+  .field{margin-top:15px}
+  .field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
   .field input[type=text], .field select, .field textarea{
-    width:100%;border:1px solid var(--line);border-radius:10px;background:var(--ground);
-    color:var(--ink);padding:10px 12px;font:inherit;
+    width:100%;border:1px solid var(--line);border-radius:11px;background:var(--ground);
+    color:var(--ink);padding:11px 13px;font:inherit;
+    transition:border-color .15s, box-shadow .15s;
   }
-  .field textarea{min-height:74px;resize:vertical}
-  .setuphero{text-align:center;margin:44px 0 30px}
-  .setuphero h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:34px;margin:0 0 10px;line-height:1.15;text-wrap:balance}
-  .setuphero p{color:var(--ink-soft);max-width:46ch;margin:0 auto;font-size:15.5px}
+  .field input[type=text]:focus, .field select:focus, .field textarea:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .field textarea{min-height:78px;resize:vertical}
+  .setuphero{text-align:center;margin:52px 0 30px}
+  .setuphero h1{
+    font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:clamp(32px,7vw,46px);
+    margin:0 0 14px;line-height:1.1;text-wrap:balance;letter-spacing:-.012em;
+    animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .setuphero p{color:var(--ink-soft);max-width:47ch;margin:0 auto;font-size:15.5px;animation:rise .55s cubic-bezier(.2,.7,.2,1) .1s both}
+  .teaser{
+    margin:0 auto 26px;max-width:460px;text-align:center;
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;
+    padding:18px 24px;box-shadow:var(--shadow);
+    animation:rise .55s cubic-bezier(.2,.7,.2,1) .18s both;
+  }
+  .teaser .tlabel{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--warm);margin-bottom:7px}
+  .teaser .tq{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:19px;line-height:1.35;text-wrap:balance}
 
   /* ---------- identity ---------- */
   .whoami{margin-top:30px}
-  .whoami .grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .whoami .grid{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px}
   .whoami .grid button{
+    display:inline-flex;align-items:center;gap:8px;
     border:1.5px solid var(--line);background:var(--surface);border-radius:999px;
-    padding:8px 16px;font-weight:600;font-size:15px;
+    padding:7px 17px 7px 7px;font-weight:600;font-size:15px;
+    transition:border-color .15s, transform .15s;
   }
-  .whoami .grid button:hover{border-color:var(--accent)}
+  .whoami .grid button:hover{border-color:var(--accent);transform:translateY(-1px)}
 
   /* ---------- misc ---------- */
   .banner{
-    border-radius:10px;padding:10px 14px;font-size:13.5px;margin:14px 0 0;
+    border-radius:12px;padding:11px 15px;font-size:13.5px;margin:14px 0 0;
     background:var(--warm-soft);color:var(--ink);
   }
   .toast{
-    position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
-    background:var(--ink);color:var(--ground);padding:10px 18px;border-radius:999px;
-    font-size:14px;font-weight:600;box-shadow:var(--shadow);z-index:50;
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+    background:var(--ink);color:var(--ground);padding:11px 20px;border-radius:999px;
+    font-size:14px;font-weight:600;box-shadow:var(--shadow-pop);z-index:50;
+    animation:rise .3s cubic-bezier(.2,.7,.2,1) both;
   }
   .yourline{border-left:3px solid var(--warm);padding:2px 0 2px 14px;margin-top:8px}
   .yourline .txt{font-size:15px;white-space:pre-wrap}
-  .footer{margin-top:44px;text-align:center;font-size:12px;color:var(--ink-faint)}
+  .footer{margin-top:52px;text-align:center;font-size:12px;color:var(--ink-faint)}
+  .footer .orn{color:var(--warm);margin-right:6px}
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -616,6 +718,26 @@ function toast(msg){
   setTimeout(function(){ t.remove(); }, 3200);
 }
 function uid(){ return Math.random().toString(36).slice(2,9); }
+function hueFor(name){
+  var h = 0;
+  for(var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+function avHTML(name, done){
+  var ini = (String(name).trim().charAt(0) || "?").toUpperCase();
+  return '<span class="av">' + (done ? "✓" : esc(ini)) + '</span>';
+}
+function chipHTML(m, done, isMe){
+  return '<span class="chip' + (done ? " done" : "") + (isMe ? " me" : "") + '" style="--avh:' + hueFor(m.name) + '">' +
+    avHTML(m.name, done) + esc(m.name) + '</span>';
+}
+function sprig(){
+  return '<div class="sprig" aria-hidden="true"><svg viewBox="0 0 56 12" width="56" height="12" fill="none">' +
+    '<path d="M2 6h18M36 6h18" stroke="currentColor" stroke-width="1"/>' +
+    '<circle cx="28" cy="6" r="2.4" fill="currentColor"/>' +
+    '<circle cx="21.5" cy="6" r="1.2" fill="currentColor" opacity=".55"/>' +
+    '<circle cx="34.5" cy="6" r="1.2" fill="currentColor" opacity=".55"/></svg></div>';
+}
 
 function render(){
   if(!sampleMode){
@@ -643,14 +765,14 @@ function render(){
     html += '<div class="backrow"><button class="linkbtn" data-act="goto" data-v="archive">← All days</button></div>';
     html += renderDay(view.slice(4), me, false);
   }
-  html += '<div class="footer">Dajia Talks · one question a day, answered together</div>';
+  html += '<div class="footer"><span class="orn">❧</span>Dajia Talks · one question a day, answered together</div>';
   app.innerHTML = html;
 }
 
 function renderHeader(me){
   var tabs = [["today","Today"],["archive","Past days"],["family","Family"]];
   var cur = view.indexOf("day:")===0 ? "archive" : view;
-  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div>' +
+  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span><span class="cjk" aria-hidden="true">大家</span></div>' +
     '<div class="famname">' + esc(state.familyName) + (me ? '<br><span class="mono" style="font-size:11px">you are ' + esc(me.name) + ' · <button class="linkbtn" style="font-size:11px" data-act="switchme">switch</button></span>' : "") + '</div></header>';
   h += '<nav class="tabs">' + tabs.map(function(t){
     return '<button data-act="goto" data-v="' + t[0] + '" class="' + (cur===t[0]?"on":"") + '">' + t[1] + '</button>';
@@ -665,7 +787,7 @@ function renderWhoAmI(){
   var h = '<div class="whoami"><div class="sectionhead">Who are you?</div>' +
     '<p class="hint">Pick yourself once on this device — your answers will be signed with this name.</p>';
   h += '<div class="grid">' +
-    state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") + '</div>';
+    state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '" style="--avh:' + hueFor(m.name) + '">' + avHTML(m.name) + esc(m.name) + '</button>'; }).join("") + '</div>';
   h += '<div style="margin-top:22px" class="hint">Not listed? ' +
     '<button class="linkbtn" data-act="gotofamily">Add yourself in Family</button></div></div>';
   return h;
@@ -688,7 +810,7 @@ function renderDay(dateKey, me, isToday){
   h += '<div class="eyebrow"><span class="mono">Day ' + dayNumber(dateKey) + '</span><span class="sep">·</span>' +
        '<span class="tag">' + esc(q.tag) + '</span><span class="sep">·</span>' +
        '<span>' + (q.t==="poll" ? "Poll" : "Open answer") + '</span></div>';
-  h += '<h1 class="q">' + esc(q.q) + '</h1>';
+  h += '<h1 class="q">' + esc(q.q) + '</h1>' + sprig();
   if(!isToday) h += '<p class="qsub">' + prettyDate(dateKey, {weekday:"long", year:"numeric", month:"long", day:"numeric"}) + '</p>';
   else h += '<p class="qsub">Everyone gets this question today. Answers open when the whole family is in — or at ' + revealLabel() + '.</p>';
 
@@ -715,7 +837,7 @@ function renderDay(dateKey, me, isToday){
   } else {
     var mins = minutesToReveal();
     var cd = mins>=60 ? Math.floor(mins/60) + "h " + (mins%60) + "m" : mins + "m";
-    h += '<div class="card lock"><div class="sectionhead">Answers are sealed</div>' +
+    h += '<div class="card lock"><div class="seal" aria-hidden="true">封</div><div class="sectionhead">Answers are sealed</div>' +
       '<div class="big">The table opens when everyone in ' + esc(state.familyName) + ' has answered</div>' +
       '<div class="hint">or at ' + revealLabel() + ' — <span class="count mono" data-countdown>' + cd + '</span> from now, whichever comes first.</div></div>';
   }
@@ -750,8 +872,7 @@ function renderPresence(dateKey, me){
   var n = state.members.filter(function(m){ return !!d.answers[m.id]; }).length;
   return '<div class="grouprow"><span class="gname mono">' + n + ' of ' + state.members.length + ' in</span><span class="chips">' +
     state.members.map(function(m){
-      var done = !!d.answers[m.id];
-      return '<span class="chip' + (done?" done":"") + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>';
+      return chipHTML(m, !!d.answers[m.id], me && m.id === me.id);
     }).join("") + '</span></div>';
 }
 
@@ -782,7 +903,7 @@ function renderPollReveal(q, entries){
   q.o.forEach(function(o,i){
     var n = counts[i].length, pct = total? Math.round(n/total*100) : 0;
     h += '<div class="pollrow"><div class="pollhead"><span class="lbl">' + esc(o) +
-      (n===max && n>0 ? '<span class="lead mono">LEADING</span>' : '') + '</span>' +
+      (n===max && n>0 ? '<span class="lead mono">★ LEADING</span>' : '') + '</span>' +
       '<span class="num mono">' + n + ' · ' + pct + '%</span></div>' +
       '<div class="bartrack"><div class="barfill" style="width:' + (total? (n/total*100) : 0) + '%"></div></div>' +
       '<div class="voters">' + (n ? counts[i].map(esc).join(" · ") : "—") + '</div></div>';
@@ -812,7 +933,7 @@ function renderLetters(dateKey, q, entries, me){
   h += '<div class="lettergroup">';
   entries.forEach(function(e){
     var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
-    h += '<div class="letter"><div class="from"><span class="who">' + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
+    h += '<div class="letter"><div class="from"><span class="who" style="--avh:' + hueFor(e.name) + '">' + avHTML(e.name) + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
       '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
   });
   h += '</div>';
@@ -867,7 +988,7 @@ function renderFamily(me){
   h += '</div>';
 
   h += '<div class="card"><div class="sectionhead">At the table · ' + state.members.length + '</div><div class="chips" style="margin-bottom:10px">' +
-    state.members.map(function(m){ return '<span class="chip' + (me&&m.id===me.id?" me":"") + '">' + esc(m.name) + '</span>'; }).join("") + '</div>';
+    state.members.map(function(m){ return chipHTML(m, false, me && m.id === me.id); }).join("") + '</div>';
   if(!readOnly){
     h += '<div class="btnrow"><input type="text" id="newmember" placeholder="Add a person" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);padding:8px 12px;font:inherit">' +
       '<button class="btn ghost small" data-act="addmember">Add</button></div>';
@@ -890,7 +1011,7 @@ function tzSelect(id, val){
 
 /* ---------------- web rooms screens ---------------- */
 function renderWordmark(){
-  return '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div></header>';
+  return '<header><div class="wordmark">Dajia Talks<span class="dot">.</span><span class="cjk" aria-hidden="true">大家</span></div></header>';
 }
 function renderShell(msg){
   return renderWordmark() + '<div class="card lock" style="margin-top:40px"><div class="big">' + esc(msg) + '</div></div>';
@@ -899,6 +1020,8 @@ function renderLanding(){
   var h = renderWordmark();
   h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
     '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or 6:00 PM, whichever comes first. Then the table opens.</p></div>';
+  var tq = questionForDate(famParts().dateKey);
+  h += '<div class="teaser"><span class="tlabel mono">Tonight, at every table</span><span class="tq">“' + esc(tq.q) + '”</span></div>';
   var known = roomsMap(), ids = Object.keys(known).filter(function(k){ return known[k] && known[k].name; });
   if(ids.length){
     h += '<div class="card"><div class="sectionhead">Your tables</div><div class="chips">' +
@@ -952,7 +1075,7 @@ function renderJoin(){
   if(state.members.length){
     h += '<div class="whoami"><div class="sectionhead">Been here before?</div>' +
       '<p class="hint">Pick yourself instead — this device will remember you.</p><div class="grid">' +
-      state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '">' + esc(m.name) + '</button>'; }).join("") +
+      state.members.map(function(m){ return '<button data-act="pickme" data-id="' + m.id + '" style="--avh:' + hueFor(m.name) + '">' + avHTML(m.name) + esc(m.name) + '</button>'; }).join("") +
       '</div></div>';
   }
   return h;
@@ -960,7 +1083,7 @@ function renderJoin(){
 
 /* ---------------- setup ---------------- */
 function renderSetup(){
-  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span></div></header>';
+  var h = '<header><div class="wordmark">Dajia Talks<span class="dot">.</span><span class="cjk" aria-hidden="true">大家</span></div></header>';
   h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
     '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or ' + revealLabel() + ', whichever comes first. Then the table opens.</p></div>';
   h += '<div class="card"><div class="sectionhead">Set the table</div>' +
