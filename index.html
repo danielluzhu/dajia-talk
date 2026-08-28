@@ -393,6 +393,23 @@
   .mre.has{opacity:1;border-color:var(--line)}
   .mre.mine{opacity:1;background:var(--warm-soft);border-color:transparent;color:var(--ink)}
   .mre .mono{font-size:10px}
+  .mre.mrep{font-size:10.5px;letter-spacing:.02em}
+  .mq{
+    display:block;border-left:2px solid var(--warm);background:var(--ground);
+    border-radius:4px 8px 8px 4px;padding:4px 10px;margin:3px 0 5px;
+    font-size:12.5px;color:var(--ink-soft);cursor:pointer;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+  }
+  .mq b{color:var(--ink)}
+  .msg.flash .mb{background:var(--warm-soft);transition:background .3s}
+  #replybar .rb{
+    display:flex;align-items:center;gap:8px;justify-content:space-between;
+    background:var(--ground);border:1px solid var(--line-soft);border-radius:10px;
+    padding:6px 12px;margin-bottom:8px;font-size:12.5px;color:var(--ink-soft);
+  }
+  #replybar .rbtxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #replybar .rbx{border:none;background:none;font-size:16px;color:var(--ink-faint);padding:0 2px;line-height:1}
+  #replybar .rbx:hover{color:var(--ink)}
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -473,6 +490,7 @@ function apiSave(id, data){
 /* ---------------- table talk (per-day chat) ---------------- */
 var chatCache = {};      /* key -> {msgs:[{id,member,text,at}], loading} */
 var chatDraft = "";
+var chatReplyTo = null;   /* message id being replied to */
 var sampleChat = null, sampleChatReacts = null;
 function chatOn(){ return sampleMode || (BACKEND.type === "clickhouse" && !!BACKEND.url && !!roomId); }
 function chatKey(day){ return (sampleMode ? "sample" : roomId) + "|" + day; }
@@ -496,13 +514,13 @@ function loadChat(day){
   if(entry.loading) return;
   entry.loading = true;
   Promise.all([
-    chQuery("SELECT id, member, text, toUnixTimestamp64Milli(at) AS at FROM dajia.chat WHERE room = {r:String} AND day = {d:String} ORDER BY at LIMIT 500 FORMAT JSONEachRow", {r:roomId, d:day}),
+    chQuery("SELECT id, member, text, reply, toUnixTimestamp64Milli(at) AS at FROM dajia.chat WHERE room = {r:String} AND day = {d:String} ORDER BY at LIMIT 500 FORMAT JSONEachRow", {r:roomId, d:day}),
     chQuery("SELECT msg, emoji, member FROM (SELECT msg, emoji, member, argMax(op, at) AS o FROM dajia.chat_reacts WHERE room = {r:String} AND day = {d:String} GROUP BY msg, emoji, member) WHERE o = 1 FORMAT JSONEachRow", {r:roomId, d:day})
   ]).then(function(results){
       entry.loading = false;
       var server = results[0].trim() ? results[0].trim().split("\n").map(function(l){
         var row = JSON.parse(l);
-        return {id:row.id, member:row.member, text:row.text, at:Number(row.at)};
+        return {id:row.id, member:row.member, text:row.text, reply:row.reply || "", at:Number(row.at)};
       }) : [];
       var seen = {};
       server.forEach(function(m){ seen[m.id] = true; });
@@ -551,12 +569,22 @@ function chatMsgsHTML(day){
   var entry = chatEntry(day);
   if(!entry.msgs.length) return '<div class="hint" style="padding:6px 2px">Nothing yet — say the first word.</div>';
   var meNow = getMe();
+  var byId = {};
+  entry.msgs.forEach(function(m){ byId[m.id] = m; });
   return entry.msgs.map(function(m){
     var who = memberById(m.member);
     var name = who ? who.name : "someone";
     var mine = meNow && meNow.id === m.member;
     var t = m.at ? new Date(m.at).toLocaleTimeString(undefined, {hour:"numeric", minute:"2-digit"}) : "";
     var r = entry.reacts[m.id] || {};
+    var quote = "";
+    if(m.reply){
+      var parent = byId[m.reply];
+      var pWho = parent ? memberById(parent.member) : null;
+      quote = '<span class="mq" data-act="chatjump" data-msg="' + esc(m.reply) + '">' +
+        '<b>' + esc(pWho ? pWho.name : "earlier") + '</b> ' +
+        esc(parent ? (parent.text.length > 70 ? parent.text.slice(0, 70) + "…" : parent.text) : "an earlier message") + '</span>';
+    }
     var reactBtns = EMOJI.map(function(em){
       var arr = r[em] || [];
       var iReacted = meNow && arr.indexOf(meNow.id) >= 0;
@@ -565,12 +593,26 @@ function chatMsgsHTML(day){
         'data-day="' + day + '" data-msg="' + m.id + '" data-e="' + esc(em) + '" title="' + esc(names) + '">' +
         em + (arr.length ? ' <span class="mono">' + arr.length + '</span>' : "") + '</button>';
     }).join("");
-    return '<div class="msg' + (mine ? " mine" : "") + '" style="--avh:' + hueFor(name) + '">' + avHTML(name) +
+    if(meNow) reactBtns += '<button class="mre mrep" data-act="chatreplyto" data-day="' + day + '" data-msg="' + m.id + '">↩ reply</button>';
+    return '<div class="msg' + (mine ? " mine" : "") + '" id="msg-' + m.id + '" style="--avh:' + hueFor(name) + '">' + avHTML(name) +
       '<div class="mb"><span class="mh"><span class="mn">' + esc(name) + '</span><span class="mt mono">' + t + '</span></span>' +
+      quote +
       '<span class="mx">' + esc(m.text) + '</span>' +
       (meNow || Object.keys(r).length ? '<span class="mreacts">' + reactBtns + '</span>' : '') +
       '</div></div>';
   }).join("");
+}
+function updateReplyBar(day){
+  var bar = document.getElementById("replybar");
+  if(!bar) return;
+  if(!chatReplyTo){ bar.innerHTML = ""; return; }
+  var entry = chatEntry(day);
+  var parent = null;
+  entry.msgs.forEach(function(m){ if(m.id === chatReplyTo) parent = m; });
+  var pWho = parent ? memberById(parent.member) : null;
+  bar.innerHTML = '<span class="rb"><span class="rbtxt">Replying to <b>' + esc(pWho ? pWho.name : "…") + '</b> — ' +
+    esc(parent ? (parent.text.length > 50 ? parent.text.slice(0, 50) + "…" : parent.text) : "") + '</span>' +
+    '<button class="rbx" data-act="chatreplycancel" aria-label="Cancel reply">×</button></span>';
 }
 function sendChat(day){
   var input = document.getElementById("chatinput");
@@ -578,14 +620,16 @@ function sendChat(day){
   var meNow = getMe();
   if(!text || !meNow) return;
   if(text.length > 500) text = text.slice(0, 500);
-  var msg = {id:uid(), member:meNow.id, text:text, at:Date.now()};
+  var msg = {id:uid(), member:meNow.id, text:text, reply:chatReplyTo || "", at:Date.now()};
   chatEntry(day).msgs.push(msg);
   chatDraft = "";
+  chatReplyTo = null;
   if(input) input.value = "";
   updateChatDom(day);
+  updateReplyBar(day);
   if(sampleMode) return;
-  chQuery("INSERT INTO dajia.chat (room, day, id, member, text) FORMAT JSONEachRow", {},
-    JSON.stringify({room:roomId, day:day, id:msg.id, member:msg.member, text:msg.text}))
+  chQuery("INSERT INTO dajia.chat (room, day, id, member, text, reply) FORMAT JSONEachRow", {},
+    JSON.stringify({room:roomId, day:day, id:msg.id, member:msg.member, text:msg.text, reply:msg.reply}))
     .then(function(){ loadChat(day); },
       function(){ toast("Couldn't send — check your connection"); });
 }
@@ -598,7 +642,8 @@ function renderChat(dateKey, me){
     '<span class="wn mono" id="chatcount">' + (entry.msgs.length || "") + '</span></div>' +
     '<div class="msgs" id="chatlist" data-day="' + dateKey + '">' + chatMsgsHTML(dateKey) + '</div>';
   if(me){
-    h += '<div class="chatrow"><input type="text" id="chatinput" maxlength="500" placeholder="Say something about today’s question…" value="' + esc(chatDraft) + '">' +
+    h += '<div id="replybar"></div>' +
+      '<div class="chatrow"><input type="text" id="chatinput" maxlength="500" placeholder="Say something about today’s question…" value="' + esc(chatDraft) + '">' +
       '<button class="btn small" data-act="chatsend" data-day="' + dateKey + '">Send</button></div>';
   } else {
     h += '<p class="hint">Join the table to chime in.</p>';
@@ -1456,7 +1501,7 @@ function loadSample(){
   sampleChat[shift(-1)] = [
     {id:"c1", member:"m3", text:"Okay, Lola's pandesal answer just made me cry on the bus", at:Date.now() - 86000000},
     {id:"c2", member:"m6", text:"Come home and I will make you some, anak.", at:Date.now() - 85900000},
-    {id:"c3", member:"m5", text:"petition for Lola to open a bakery", at:Date.now() - 85800000}
+    {id:"c3", member:"m5", text:"petition for Lola to open a bakery", reply:"c2", at:Date.now() - 85800000}
   ];
   sampleChatReacts = {};
   sampleChatReacts[shift(-1)] = {c2:{"🥹":["m3","m5","m4"]}, c3:{"😂":["m1","m7"],"❤️":["m6"]}};
@@ -1482,7 +1527,7 @@ document.addEventListener("click", function(ev){
   if(!el) return;
   var act = el.getAttribute("data-act");
 
-  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; render(); }
+  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; chatDraft=""; chatReplyTo=null; render(); }
   else if(act==="gotofamily"){ view="family"; render(); }
   else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
   else if(act==="switchme"){
@@ -1598,6 +1643,25 @@ document.addEventListener("click", function(ev){
   }
   else if(act==="chatsend"){ sendChat(el.getAttribute("data-day")); }
   else if(act==="chatreact"){ toggleChatReact(el.getAttribute("data-day"), el.getAttribute("data-msg"), el.getAttribute("data-e")); }
+  else if(act==="chatreplyto"){
+    chatReplyTo = el.getAttribute("data-msg");
+    updateReplyBar(el.getAttribute("data-day"));
+    var ciEl = document.getElementById("chatinput");
+    if(ciEl) ciEl.focus();
+  }
+  else if(act==="chatreplycancel"){
+    chatReplyTo = null;
+    var bar = document.getElementById("replybar");
+    if(bar) bar.innerHTML = "";
+  }
+  else if(act==="chatjump"){
+    var target = document.getElementById("msg-" + el.getAttribute("data-msg"));
+    if(target){
+      target.scrollIntoView({block:"center", behavior:"smooth"});
+      target.classList.add("flash");
+      setTimeout(function(){ target.classList.remove("flash"); }, 1400);
+    }
+  }
   else if(act==="rm-retry"){ bootRoom(); }
   else if(act==="copylink"){
     var link = inviteLink();

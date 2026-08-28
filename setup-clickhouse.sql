@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS dajia.chat
     id     String,
     member String,
     text   String,
+    reply  String DEFAULT '',  -- id of the message this one replies to
     at     DateTime64(3) DEFAULT now64(3)
 )
 ENGINE = MergeTree

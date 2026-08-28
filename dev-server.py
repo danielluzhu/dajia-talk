@@ -95,7 +95,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             row = json.loads(body)
             import time
             CHAT_STORE.setdefault((row["room"], row["day"]), []).append(
-                {"id": row["id"], "member": row["member"], "text": row["text"], "at": int(time.time() * 1000)})
+                {"id": row["id"], "member": row["member"], "text": row["text"],
+                 "reply": row.get("reply", ""), "at": int(time.time() * 1000)})
             self.send_response(200)
             self.send_header("Content-Length", "0")
             self.end_headers()
