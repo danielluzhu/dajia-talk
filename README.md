@@ -18,15 +18,19 @@ table opens:
 
 ## How it runs
 
-The entire app is one file, [`dajia-talks.html`](dajia-talks.html) — no build
+The entire app is one file, [`index.html`](index.html) — no build
 step, no server, no dependencies. It is deployed as a Claude Artifact with the
 `artifact` runtime capability: the page embeds its state (members, answers,
 reactions) as JSON and saves a new version of itself whenever someone answers,
 so everyone who opens the shared link sees the same living record.
 
-Live app: https://claude.ai/code/artifact/f7f71fac-1f33-4e54-806d-012c9b99c0e9
+Live app (shared, saves for everyone): https://claude.ai/code/artifact/f7f71fac-1f33-4e54-806d-012c9b99c0e9
 
-To update the deployed app, edit `dajia-talks.html` and republish it to that
+Live demo (GitHub Pages): https://danielluzhu.github.io/dajia-talk/ — same app,
+but outside the claude.ai runtime it runs in preview mode: answers stay on your
+device only. Use the sample family there to try everything.
+
+To update the deployed app, edit `index.html` and republish it to that
 artifact URL (e.g. ask Claude Code to publish the file with the artifact's URL).
 
 ## Local preview
@@ -35,13 +39,13 @@ artifact URL (e.g. ask Claude Code to publish the file with the artifact's URL).
 python3 -m http.server 8123
 ```
 
-Then open <http://localhost:8123/dajia-talks.html>. Outside the claude.ai
+Then open <http://localhost:8123/index.html>. Outside the claude.ai
 runtime the page runs in preview mode (changes stay on the device); use the
 "explore a sample family" button on the setup screen to see every state —
 sealed answers, the countdown, poll reveals, and free-form reveals — with
 demo data.
 
-## Structure of `dajia-talks.html`
+## Structure of `index.html`
 
 - `<style>` — token-based theming (light + dark via `prefers-color-scheme`
   and explicit `data-theme` stamps)
