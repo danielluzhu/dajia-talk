@@ -119,7 +119,8 @@ for (const [qiStr, votes] of Object.entries(POLLS)) {
   });
   const max = Math.max(...votes);
   const leaders = votes.map((v, i) => [v, i]).filter(([v]) => v === max).map(([, i]) => i);
-  const line = leaders.length > 1 || max <= 52
+  const sorted = votes.slice().sort((a, b) => b - a);
+  const line = leaders.length > 1 || (sorted[0] - (sorted[1] || 0)) <= 4
     ? "The world is split almost down the middle on this one."
     : `The world leans '${opts[leaders[0]]}' — ${max} of 100.`;
   digestRows.push({ q: qi, digest: JSON.stringify({ type: "poll", n: 100, votes, line }) });

@@ -1078,11 +1078,12 @@ var QBANK = [
   {t:"poll", tag:"Together", q:"The last bite of a shared dish belongs to:", o:["Whoever's fastest","The youngest","The eldest","Split it into tiny pieces"]},
   {t:"free", tag:"Memory lane", q:"If money were no object, where should this family go together — and what's first on the list?"},
   {t:"poll", tag:"Together", q:"The soundtrack of our family car rides was:", o:["70s–80s","90s","2000s","Whatever the radio gave us"], f:["What was THE song?","What was THE song?","What was THE song?","What was THE song?"]},
-  {t:"free", tag:"Big & little", q:"What's a question you wish this family asked each other more often? (Answer it too.)"}
+  {t:"free", tag:"Big & little", q:"What's a question you wish this family asked each other more often? (Answer it too.)"},
+  {t:"poll", tag:"Shop talk", q:"Tabs or spaces?", o:["Tabs","Spaces","Whatever the formatter says"], f:["Defend your indentation in one sentence.","Defend your indentation in one sentence.","Defend your indentation in one sentence."]}
 ];
 QBANK.forEach(function(q, i){ q.qi = i; }); /* snapshots carry qi so world digests match old days */
 /* every table's first question */
-var STARTER_QI = 17; /* "What corner of San Francisco feels most like ours — and why?" */
+var STARTER_QI = 60; /* "Tabs or spaces?" */
 
 /* day keys can carry a round suffix: "2026-08-28", "2026-08-28#2", ... —
    a table can run several questions in one day once a round completes */
