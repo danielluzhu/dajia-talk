@@ -21,6 +21,7 @@ STORE = {}
 CH_STORE = {}
 CHAT_STORE = {}
 REACT_STORE = {}
+MEDIA_STORE = {}
 ROOM = re.compile(r"/rooms/([A-Za-z0-9]+)\.json")
 
 
@@ -64,7 +65,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         query = qs["query"][0].lstrip()
         n = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(n)
-        if query.upper().startswith("SELECT") and "dajia.chat_reacts" in query:
+        if query.upper().startswith("SELECT") and "dajia.media" in query:
+            mid = qs.get("param_id", [""])[0]
+            row = MEDIA_STORE.get(mid)
+            out = (json.dumps({"mime": row["mime"], "data": row["data"]}) + "\n") if row else ""
+            payload = out.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+        elif query.upper().startswith("INSERT") and "dajia.media" in query:
+            row = json.loads(body)
+            MEDIA_STORE[row["id"]] = row
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        elif query.upper().startswith("SELECT") and "dajia.chat_reacts" in query:
             key = (qs.get("param_r", [""])[0], qs.get("param_d", [""])[0])
             latest = {}
             for ev in REACT_STORE.get(key, []):

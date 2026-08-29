@@ -235,6 +235,20 @@
   .pollnotes{display:flex;flex-direction:column;gap:3px;margin-top:6px}
   .pn{font-size:13px;color:var(--ink-soft);font-style:italic}
   .pn b{color:var(--ink);font-style:normal}
+  .pollmedia{margin-top:8px}
+
+  /* ---------- attachments ---------- */
+  .attachrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .filebtn{position:relative;overflow:hidden;display:inline-flex;align-items:center;cursor:pointer}
+  .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+  .pendlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .pendlist .chip{padding:3px 8px 3px 12px}
+  .pendx{border:none;background:none;color:var(--ink-faint);font-size:14px;padding:0 0 0 5px;line-height:1;cursor:pointer}
+  .pendx:hover{color:var(--danger)}
+  .media{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .m-item img,.m-item video{max-width:100%;width:100%;border-radius:10px;display:block;border:1px solid var(--line-soft)}
+  .m-item audio{width:100%}
+  .m-wait{font-size:12.5px;color:var(--ink-faint);background:var(--surface-2);border-radius:10px;padding:14px;text-align:center}
 
   /* ---------- reveal: letters ---------- */
   .lettergroup{margin-top:18px}
@@ -494,6 +508,168 @@ function apiSave(id, data){
   }
   return fetch(dbPath(id), {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data)})
     .then(function(r){ if(!r.ok) throw new Error("save " + r.status); });
+}
+
+/* ---------------- media attachments ---------------- */
+var pendingMedia = [];   /* [{kind, mime, b64, bytes, label}] awaiting submit */
+var mediaCache = {};     /* id -> {url} | "loading" | null */
+var recState = null;     /* {rec, secs, timer} while a voice memo records */
+var MEDIA_MAX = 8 * 1024 * 1024;
+
+function mediaOn(){ return !IS_ARTIFACT && !sampleMode && BACKEND.type === "clickhouse" && !!BACKEND.url; }
+
+function fileToB64(fileOrBlob){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ var s = String(r.result); res(s.slice(s.indexOf(",") + 1)); };
+    r.onerror = rej;
+    r.readAsDataURL(fileOrBlob);
+  });
+}
+function shrinkImage(file){
+  return new Promise(function(res, rej){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      var MAX = 1600, w = img.width, h = img.height;
+      var s = Math.min(1, MAX / Math.max(w, h));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      var dataUrl = c.toDataURL("image/jpeg", 0.82);
+      res({mime:"image/jpeg", b64:dataUrl.slice(dataUrl.indexOf(",") + 1)});
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error("image")); };
+    img.src = url;
+  });
+}
+function fmtBytes(n){ return n > 900000 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
+function addPendingFile(file){
+  if(pendingMedia.length >= 3){ toast("Three attachments is plenty for one answer"); return; }
+  if((file.type || "").indexOf("image/") === 0){
+    shrinkImage(file).then(function(out){
+      pendingMedia.push({kind:"photo", mime:out.mime, b64:out.b64, bytes:Math.round(out.b64.length * 0.75), label:file.name || "photo"});
+      render();
+    }, function(){ toast("Couldn't read that image"); });
+  } else if((file.type || "").indexOf("video/") === 0){
+    if(file.size > MEDIA_MAX){ toast("Keep videos under 8 MB — roughly 20–30 seconds"); return; }
+    fileToB64(file).then(function(b64){
+      pendingMedia.push({kind:"video", mime:file.type, b64:b64, bytes:file.size, label:file.name || "video"});
+      render();
+    }, function(){ toast("Couldn't read that video"); });
+  } else {
+    toast("Photos and videos here — use the memo button for audio");
+  }
+}
+function startRec(){
+  if(recState) return;
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)){
+    toast("Voice memos aren't supported in this browser"); return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    var mime = "";
+    if(MediaRecorder.isTypeSupported){
+      if(MediaRecorder.isTypeSupported("audio/webm")) mime = "audio/webm";
+      else if(MediaRecorder.isTypeSupported("audio/mp4")) mime = "audio/mp4";
+    }
+    var rec;
+    try{ rec = mime ? new MediaRecorder(stream, {mimeType:mime}) : new MediaRecorder(stream); }
+    catch(_e){ stream.getTracks().forEach(function(t){ t.stop(); }); toast("Couldn't start recording"); return; }
+    var chunks = [];
+    rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) chunks.push(ev.data); };
+    rec.onstop = function(){
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      var secs = recState ? recState.secs : 0;
+      if(recState) clearInterval(recState.timer);
+      recState = null;
+      var blob = new Blob(chunks, {type: rec.mimeType || mime || "audio/webm"});
+      if(!blob.size){ render(); return; }
+      if(blob.size > MEDIA_MAX){ toast("That memo is too big — try under 90 seconds"); render(); return; }
+      fileToB64(blob).then(function(b64){
+        pendingMedia.push({kind:"audio", mime:blob.type, b64:b64, bytes:blob.size, label:"voice memo · " + secs + "s"});
+        render();
+      }, function(){ toast("Couldn't save the memo"); render(); });
+    };
+    recState = {rec:rec, secs:0, timer:setInterval(function(){
+      if(!recState) return;
+      recState.secs++;
+      var t = document.getElementById("rectime");
+      if(t) t.textContent = recState.secs + "s";
+      if(recState.secs >= 90) stopRec();
+    }, 1000)};
+    rec.start();
+    render();
+  }, function(){ toast("Microphone permission is needed for voice memos"); });
+}
+function stopRec(){ if(recState && recState.rec.state !== "inactive") recState.rec.stop(); }
+
+function uploadPending(){
+  if(!pendingMedia.length) return Promise.resolve([]);
+  var refs = [], chain = Promise.resolve();
+  pendingMedia.forEach(function(p){
+    chain = chain.then(function(){
+      var id = uid() + uid();
+      return chQuery("INSERT INTO dajia.media (id, room, kind, mime, bytes, data) FORMAT JSONEachRow", {},
+        JSON.stringify({id:id, room:roomId, kind:p.kind, mime:p.mime, bytes:p.bytes, data:p.b64}))
+        .then(function(){ refs.push({id:id, kind:p.kind, mime:p.mime, bytes:p.bytes}); });
+    });
+  });
+  return chain.then(function(){ return refs; });
+}
+function loadMedia(id){
+  if(mediaCache[id]) return;
+  mediaCache[id] = "loading";
+  chQuery("SELECT mime, data FROM dajia.media WHERE id = {id:String} LIMIT 1 FORMAT JSONEachRow", {id:id})
+    .then(function(text){
+      var line = text.trim().split("\n")[0];
+      if(!line){ mediaCache[id] = null; updateMediaDom(id); return; }
+      var row = JSON.parse(line);
+      mediaCache[id] = {url:"data:" + row.mime + ";base64," + row.data};
+      updateMediaDom(id);
+    }, function(){ mediaCache[id] = null; updateMediaDom(id); });
+}
+function mediaPlayerHTML(kind, url){
+  if(kind === "photo") return '<img src="' + url + '" alt="">';
+  if(kind === "video") return '<video src="' + url + '" controls playsinline></video>';
+  return '<audio src="' + url + '" controls></audio>';
+}
+function updateMediaDom(id){
+  var els = document.querySelectorAll('[data-mid="' + id + '"]');
+  for(var i = 0; i < els.length; i++){
+    var c = mediaCache[id];
+    if(c === "loading") continue;
+    if(!c){ els[i].innerHTML = '<span class="hint">attachment unavailable</span>'; continue; }
+    els[i].innerHTML = mediaPlayerHTML(els[i].getAttribute("data-kind"), c.url);
+  }
+}
+function renderMediaList(media){
+  if(!media || !media.length || !mediaOn()) return "";
+  return '<div class="media">' + media.map(function(m){
+    var c = mediaCache[m.id];
+    if(c && c !== "loading") return '<div class="m-item" data-mid="' + m.id + '" data-kind="' + m.kind + '">' + mediaPlayerHTML(m.kind, c.url) + '</div>';
+    if(m.kind === "photo"){
+      loadMedia(m.id);
+      return '<div class="m-item m-wait" data-mid="' + m.id + '" data-kind="photo">loading photo…</div>';
+    }
+    var lbl = (m.kind === "video" ? "▶ Play video" : "▶ Play voice memo") + " · " + fmtBytes(m.bytes || 0);
+    return '<div class="m-item" data-mid="' + m.id + '" data-kind="' + m.kind + '"><button class="btn ghost small" data-act="loadmedia" data-mid="' + m.id + '">' + lbl + '</button></div>';
+  }).join("") + '</div>';
+}
+function attachUI(){
+  if(!mediaOn()) return "";
+  var h = '<div class="attachrow">';
+  h += '<label class="btn ghost small filebtn">📎 Photo / video<input type="file" id="mediafile" accept="image/*,video/*"></label>';
+  if(recState) h += '<button class="btn small" data-act="recstop">■ Stop · <span id="rectime" class="mono">' + recState.secs + 's</span></button>';
+  else h += '<button class="btn ghost small" data-act="recstart">🎙 Voice memo</button>';
+  h += '</div>';
+  if(pendingMedia.length){
+    h += '<div class="pendlist">' + pendingMedia.map(function(p, i){
+      return '<span class="chip">' + esc(p.label) + ' <span class="mono">' + fmtBytes(p.bytes) + '</span>' +
+        '<button class="pendx" data-act="unattach" data-i="' + i + '" aria-label="Remove attachment">×</button></span>';
+    }).join("") + '</div>';
+  }
+  return h;
 }
 
 /* ---------------- table talk (per-day chat) ---------------- */
@@ -1193,7 +1369,7 @@ function renderDay(dateKey, me, isToday){
       h += '<div class="card"><div class="sectionhead">Your answer</div><div class="yourline">' +
         (q.t==="poll" ? '<div class="txt"><b>' + esc(q.o[myAns.choice]) + '</b>' + (myAns.note ? ' — “' + esc(myAns.note) + '”' : '') + '</div>'
                       : '<div class="txt">' + esc(myAns.text) + '</div>') +
-        '</div>' +
+        '</div>' + renderMediaList(myAns.media) +
         '<div class="btnrow"><button class="btn ghost small" data-act="editans">Change answer</button></div>' +
         '</div>';
     }
@@ -1238,10 +1414,12 @@ function renderComposer(q, myAns){
       h += '<div class="field"><label for="pollnote">' + esc(q.f[sel]) + ' <span class="hint" style="font-weight:400">(optional)</span></label>' +
         '<input type="text" id="pollnote" maxlength="200" placeholder="A few words is plenty" value="' + esc(noteVal) + '"></div>';
     }
+    h += attachUI();
     h += '<div class="btnrow"><button class="btn" data-act="submit" ' + (sel==null?"disabled":"") + '>Lock it in</button>';
   } else {
     var val = draftText || (myAns ? myAns.text : "");
     h += '<textarea id="freetext" placeholder="Take your time — a few sentences is perfect.">' + esc(val) + '</textarea>';
+    h += attachUI();
     h += '<div class="btnrow"><button class="btn" data-act="submit">Send to the table</button>';
   }
   if(myAns) h += '<button class="btn ghost" data-act="canceledit">Cancel</button>';
@@ -1365,6 +1543,11 @@ function renderPollReveal(q, entries){
         return '<span class="pn"><b>' + esc(x.name) + '</b> “' + esc(x.note) + '”</span>';
       }).join("") + '</div>';
     }
+    entries.forEach(function(e){
+      if(e.ans.choice === i && e.ans.media && e.ans.media.length){
+        h += '<div class="pollmedia"><span class="pn"><b>' + esc(e.name) + '</b></span>' + renderMediaList(e.ans.media) + '</div>';
+      }
+    });
     h += '</div>';
   });
   h += '</div>';
@@ -1393,7 +1576,7 @@ function renderLetters(dateKey, q, entries, me){
   entries.forEach(function(e){
     var when = (e.ans.at && e.ans.at > 1e12) ? new Date(e.ans.at).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
     h += '<div class="letter" id="ans-' + e.id + '"><div class="from"><span class="who" style="--avh:' + hueFor(e.name) + '">' + avHTML(e.name) + esc(e.name) + '</span><span class="when mono">' + when + '</span></div>' +
-      '<div class="txt">' + esc(e.ans.text) + '</div>' + renderReacts(dateKey, e.id, me) + '</div>';
+      '<div class="txt">' + esc(e.ans.text) + '</div>' + renderMediaList(e.ans.media) + renderReacts(dateKey, e.id, me) + '</div>';
   });
   h += '</div>';
   return h;
@@ -1620,6 +1803,13 @@ document.addEventListener("input", function(ev){
   if(t && t.id === "chatinput") chatDraft = t.value;
   if(t && t.id === "pollnote") draftNote = t.value;
 });
+document.addEventListener("change", function(ev){
+  if(ev.target && ev.target.id === "mediafile"){
+    var fs = ev.target.files || [];
+    for(var i = 0; i < fs.length; i++) addPendingFile(fs[i]);
+    ev.target.value = "";
+  }
+});
 document.addEventListener("keydown", function(ev){
   if(ev.key === "Enter" && ev.target && ev.target.id === "chatinput"){
     ev.preventDefault();
@@ -1632,7 +1822,7 @@ document.addEventListener("click", function(ev){
   if(!el) return;
   var act = el.getAttribute("data-act");
 
-  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; draftNote=""; chatDraft=""; chatReplyTo=null; render(); }
+  if(act==="goto"){ view = el.getAttribute("data-v"); editingAnswer=false; draftText=""; draftChoice=null; draftNote=""; pendingMedia=[]; chatDraft=""; chatReplyTo=null; render(); }
   else if(act==="gotofamily"){ view="family"; render(); }
   else if(act==="pickme"){ setMe(el.getAttribute("data-id")); }
   else if(act==="switchme"){
@@ -1656,29 +1846,43 @@ document.addEventListener("click", function(ev){
     draftText = ""; draftChoice = null; worldCache = {};
     save();
   }
-  else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; draftNote=""; render(); }
-  else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; draftNote=""; render(); }
+  else if(act==="editans"){ editingAnswer = true; draftChoice=null; draftText=""; draftNote=""; pendingMedia=[]; render(); }
+  else if(act==="canceledit"){ editingAnswer = false; draftChoice=null; draftText=""; draftNote=""; pendingMedia=[]; render(); }
   else if(act==="submit"){
     var me = getMe(); if(!me) return;
+    if(recState){ toast("Finish the voice memo first"); return; }
     var dateKey = currentRoundKey();
     var d = ensureDay(dateKey);
     var q = d.q;
+    var ans = null;
     if(q.t==="poll"){
       var prev = d.answers[me.id];
       var sel = draftChoice!=null ? draftChoice : (prev ? prev.choice : null);
       if(sel==null) return;
       var noteEl = document.getElementById("pollnote");
       var note = (noteEl ? noteEl.value : draftNote).trim().slice(0, 200);
-      d.answers[me.id] = {choice:sel, at:Date.now()};
-      if(note) d.answers[me.id].note = note;
+      ans = {choice:sel, at:Date.now()};
+      if(note) ans.note = note;
     } else {
       var ta = document.getElementById("freetext");
       var txt = (ta ? ta.value : draftText).trim();
-      if(!txt){ toast("Write a little something first"); return; }
-      d.answers[me.id] = {text:txt, at:Date.now()};
+      if(!txt && !pendingMedia.length){ toast("Write a little something first — or attach it"); return; }
+      ans = {text:txt, at:Date.now()};
     }
-    editingAnswer=false; draftText=""; draftChoice=null; draftNote="";
-    save();
+    var prevMedia = d.answers[me.id] && d.answers[me.id].media;
+    el.disabled = true;
+    if(pendingMedia.length) el.textContent = "Sending…";
+    uploadPending().then(function(refs){
+      var media = (prevMedia || []).concat(refs);
+      if(media.length) ans.media = media;
+      d.answers[me.id] = ans;
+      editingAnswer=false; draftText=""; draftChoice=null; draftNote=""; pendingMedia=[];
+      save();
+    }, function(){
+      el.disabled = false;
+      el.textContent = q.t==="poll" ? "Lock it in" : "Send to the table";
+      toast("Couldn't upload the attachment — try again");
+    });
   }
   else if(act==="react"){
     var me2 = getMe(); if(!me2 || readOnly) return;
@@ -1777,6 +1981,13 @@ document.addEventListener("click", function(ev){
     state.days[nextKey] = {q: freshQ[Math.floor(Math.random() * freshQ.length)], answers:{}, reactions:{}};
     draftText = ""; draftChoice = null; editingAnswer = false;
     save();
+  }
+  else if(act==="recstart"){ startRec(); }
+  else if(act==="recstop"){ stopRec(); }
+  else if(act==="unattach"){ pendingMedia.splice(+el.getAttribute("data-i"), 1); render(); }
+  else if(act==="loadmedia"){
+    el.disabled = true; el.textContent = "loading…";
+    loadMedia(el.getAttribute("data-mid"));
   }
   else if(act==="chatsend"){ sendChat(el.getAttribute("data-day")); }
   else if(act==="chatreact"){ toggleChatReact(el.getAttribute("data-day"), el.getAttribute("data-msg"), el.getAttribute("data-e")); }

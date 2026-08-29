@@ -57,6 +57,22 @@ ORDER BY (room, day, msg);
 
 GRANT SELECT, INSERT ON dajia.chat_reacts TO dajia_app;
 
+-- Answer attachments (photos/videos/voice memos), stored as base64 blobs.
+CREATE TABLE IF NOT EXISTS dajia.media
+(
+    id    String,
+    room  String,
+    kind  String,   -- photo | video | audio
+    mime  String,
+    bytes UInt32,
+    data  String,   -- base64
+    at    DateTime64(3) DEFAULT now64(3)
+)
+ENGINE = MergeTree
+ORDER BY id;
+
+GRANT SELECT, INSERT ON dajia.media TO dajia_app;
+
 -- Keep a runaway client (or a vandal who reads the page source) rate-limited.
 CREATE QUOTA IF NOT EXISTS dajia_app_quota
     KEYED BY ip_address
