@@ -1683,7 +1683,7 @@ function renderLanding(){
   var h = renderWordmark();
   h += '<div class="setuphero"><h1>One question a day.<br>Answered by the whole family.</h1>' +
     '<p>Every day, everyone gets the same question — a food debate, a fond memory, a would-you-rather. Answers stay sealed until the whole family is in, or 6:00 PM, whichever comes first. Then the table opens.</p></div>';
-  var tq = questionForDate(famParts().dateKey);
+  var tq = QBANK[STARTER_QI]; /* the teaser previews what a new table actually gets */
   h += '<div class="teaser"><span class="tlabel mono">Tonight, at every table</span><span class="tq">“' + esc(tq.q) + '”</span></div>';
   var known = roomsMap(), ids = Object.keys(known).filter(function(k){ return known[k] && known[k].name; });
   if(ids.length){
