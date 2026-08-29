@@ -1087,8 +1087,9 @@ var QBANK = [
    verdict:"Tabs are semantically correct. Spaces are visually reliable. Both camps have shipped excellent software while being certain the other side is deranged. The binding ruling: commit a formatter config and never speak of this again — and yes, the formatter will choose spaces. Court adjourned."}
 ];
 QBANK.forEach(function(q, i){ q.qi = i; }); /* snapshots carry qi so world digests match old days */
-/* every table's first question */
-var STARTER_QI = 60; /* "Tabs or spaces?" */
+/* curated opening questions, in order; the rotation takes over after these */
+var STARTER_SEQ = [60, 17]; /* "Tabs or spaces?", then the SF corner question */
+var STARTER_QI = STARTER_SEQ[0];
 
 /* day keys can carry a round suffix: "2026-08-28", "2026-08-28#2", ... —
    a table can run several questions in one day once a round completes */
@@ -1986,10 +1987,17 @@ document.addEventListener("click", function(ev){
     if(!state.days[curKey] || !familyAnswered(curKey)){ toast("A new question opens once everyone has answered"); render(); return; }
     var usedQ = {};
     Object.keys(state.days).forEach(function(k){ var dq = state.days[k].q; if(dq && dq.qi != null) usedQ[dq.qi] = true; });
-    var freshQ = QBANK.filter(function(qq){ return !usedQ[qq.qi]; });
-    if(!freshQ.length){ toast("You've been through all 60 questions — impressive"); return; }
+    var pick = null;
+    for(var si = 0; si < STARTER_SEQ.length; si++){
+      if(!usedQ[STARTER_SEQ[si]]){ pick = QBANK[STARTER_SEQ[si]]; break; }
+    }
+    if(!pick){
+      var freshQ = QBANK.filter(function(qq){ return !usedQ[qq.qi]; });
+      if(!freshQ.length){ toast("You've been through every question — impressive"); return; }
+      pick = freshQ[Math.floor(Math.random() * freshQ.length)];
+    }
     var nextKey = baseOf(curKey) + "#" + (roundOf(curKey) + 1);
-    state.days[nextKey] = {q: freshQ[Math.floor(Math.random() * freshQ.length)], answers:{}, reactions:{}};
+    state.days[nextKey] = {q: pick, answers:{}, reactions:{}};
     draftText = ""; draftChoice = null; editingAnswer = false;
     save();
   }
